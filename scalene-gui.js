@@ -138,7 +138,7 @@ async function display(prof) {
 	for (const l in prof.files[f].lines) {
 	    const line = prof.files[f].lines[l];
 	    if (line.lineno > prevLineno + 1) {
-		s += '<tr><td colspan="${columns.length+1}">&nbsp;</td></tr>';
+		s += '<tr><td style="line-height: 1px" colspan="${columns.length+1}">&nbsp;</td></tr>';
 	    }
 	    prevLineno = line.lineno;
 	    s += '<tr>';
@@ -169,14 +169,12 @@ async function display(prof) {
 		s += `<td align="right"><font color="${MemoryColor}">${line.n_peak_mb.toFixed(0)}M</font></td>`;
 	    }
 	    s += `<td><span id="plot${plots.length}"></span>`;	    
-	    if (line.n_usage_fraction < 0.01) {
-		s += '</td>';
-	    } else {
-		s += `${(100 * line.n_usage_fraction).toFixed(0)}%</td>`;
+	    if (line.n_usage_fraction >= 0.01) {
+		s += `${(100 * line.n_usage_fraction).toFixed(0)}%`;
 	    }
+	    s += '</td>';
 	    if (line.memory_samples.length > 0) {
 		plots.push(makePlot(line.memory_samples));
-		console.log(plots.length);
 	    } else {
 		plots.push(null);
 	    }
@@ -186,7 +184,7 @@ async function display(prof) {
 		s += `<td align="right"><font color="${CopyColor}">${line.n_copy_mb_s.toFixed(0)}</font></td>`;
 	    }
 	    const codeLine = Prism.highlight(line.line, Prism.languages.python, 'python');
-	    s += `<td align="left" bgcolor="whitesmoke"><code class="language-python">${codeLine}</code></td>`;
+	    s += `<td align="left" bgcolor="whitesmoke"><pre style="display: inline; white-space: pre-wrap; overflow-x: auto; border: 0px;"><code class="language-python">${codeLine}</code></pre></td>`;
 	    s += '</tr>';
 	}
 	s += '</tbody>';
