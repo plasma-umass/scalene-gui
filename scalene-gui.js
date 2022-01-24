@@ -10,9 +10,9 @@ function makeBar(python, native, system) {
 	"height" : "container",
 	"padding": 0,
 	"data": {
-	    "values": [{"x" : 0, "y" : python.toFixed(1), "c": "Python " + python.toFixed(1) + "%" },
-		       {"x" : 0, "y" : native.toFixed(1), "c": "native " + native.toFixed(1) + "%" },
-		       {"x" : 0, "y" : system.toFixed(1), "c": "system " + system.toFixed(1) + "%" }]
+	    "values": [{"x" : 0, "y" : python.toFixed(1), "c": "(Python) " + python.toFixed(1) + "%" },
+		       {"x" : 0, "y" : native.toFixed(1), "c": "(native) " + native.toFixed(1) + "%" },
+		       {"x" : 0, "y" : system.toFixed(1), "c": "(system) " + system.toFixed(1) + "%" }]
 	},
 	"mark": { "type" : "bar" },
 	"encoding": {
@@ -40,8 +40,8 @@ function makeMemoryBar(memory, title, python_percent, total, color) {
 	"height" : "container",
 	"padding": 0,
 	"data": {
-	    "values": [{"x" : 0, "y" : python_percent * memory, "c": "Python: " + (python_percent * memory).toFixed(1) + "MB" },
-		       {"x" : 0, "y" : (1.0 - python_percent) * memory, "c": "native: " + ((1.0 - python_percent) * memory).toFixed(1) + "MB" }]
+	    "values": [{"x" : 0, "y" : python_percent * memory, "c": "(Python) " + (python_percent * memory).toFixed(1) + "MB" },
+		       {"x" : 0, "y" : (1.0 - python_percent) * memory, "c": "(native) " + ((1.0 - python_percent) * memory).toFixed(1) + "MB" }]
 	},
 	"mark": { "type" : "bar" },
 	"encoding": {
