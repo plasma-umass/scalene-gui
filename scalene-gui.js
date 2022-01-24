@@ -28,6 +28,34 @@ function makeBar(python, native, system) {
 }
 
 
+function makeMemoryBar(memory, title, total, color) {
+    return {
+	"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+	"config": {
+	    "view": {
+		"stroke" : "transparent"
+	    }
+	},
+	"width": 75,
+	"height" : "container",
+	"padding": 0,
+	"data": {
+	    "values": [{"x" : 0, "y" : memory, "c": memory + "MB" }]
+	},
+	"mark": { "type" : "bar" },
+	"encoding": {
+	    "x": {"aggregate": "sum", "field": "y", "axis": false,
+		  "scale" : { "domain" : [0, total] } },
+	    "color": {"field": "c", "type": "nominal", "legend" : false,
+		      "scale": { "range": [color, "lightgreen", "green"] } },
+	    "tooltip" : [
+		{ "field" : "c", "type" : "nominal", "title" : title }
+	    ]
+	},
+    };
+}
+
+
 function makePlot(samples) {
 //    const maxHeight = 20; // TESTME
     const values = samples.map((v, i) => {
@@ -143,16 +171,17 @@ async function display(prof) {
 	{ title: ["gpu", ""], color: CopyColor },
 	{ title: ["", ""], color: "black" },
     ];
-    let plots = [];
-    let bars = [];
+    let memory_sparklines = [];
+    let cpu_bars = [];
+    let memory_bars = [];
     let s = "";
-    s += `<p class="text-center">Memory usage: <span id="plot0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
-    plots.push(makePlot(prof.samples));
+    s += `<p class="text-center">Memory usage: <span id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
+    memory_sparklines.push(makePlot(prof.samples));
     s += '<div class="container-fluid">';
     for (const f in prof.files) {
 	s += `<p class="text-center"><code>${f}</code>: % of time = ${prof.files[f].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</p>`
 	s += '<div>';
-	s += '<table class="profile table table-hover table-condensed">';
+	s += '<table class="profile table-hover table-condensed">';
 	s += '<thead class="thead-light">';
 	s += '<tr>';
 	for (const col of columns) {
@@ -175,8 +204,8 @@ async function display(prof) {
 	    prevLineno = line.lineno;
 	    s += '<tr>';
 	    s += '<td style="height: 10; vertical-align: middle" align="left">';
-	    s += `<span style="height: 10; vertical-align: middle" id="bars${bars.length}"></span>`;
-	    bars.push(makeBar(line.n_cpu_percent_python, line.n_cpu_percent_c, line.n_sys_percent));
+	    s += `<span style="height: 10; vertical-align: middle" id="cpu_bar${cpu_bars.length}"></span>`;
+	    cpu_bars.push(makeBar(line.n_cpu_percent_python, line.n_cpu_percent_c, line.n_sys_percent));
 	    // bars.push(null);
 	    if (false) {
 		if (line.n_cpu_percent_python >= 1.0) {
@@ -197,28 +226,36 @@ async function display(prof) {
 	    if (line.n_python_fraction < 0.01) {
 		s += '<td></td>';
 	    } else {
-		s += `<td align="right"><font color="${MemoryColor}">${(100 * line.n_python_fraction).toFixed(0)}%&nbsp;</font></td>`;
+		s += `<td align="right"><font style="font-size: small" color="${MemoryColor}">${(100 * line.n_python_fraction).toFixed(0)}%&nbsp;</font></td>`;
 	    }
 	    if (line.n_avg_mb < 1.0) {
 		s += '<td></td>';
 	    } else {
-		s += `<td align="right"><font color="${MemoryColor}">${line.n_avg_mb.toFixed(0)}MB&nbsp;</font></td>`;
+		s += `<td align="right">`; // <font style="font-size: small" color="${MemoryColor}">${line.n_avg_mb.toFixed(0)}MB&nbsp;</font></td>`;
+		s += `<span style="height: 10; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
+		s += '</td>';
+		memory_bars.push(makeMemoryBar(line.n_avg_mb.toFixed(0), "average", prof.max_footprint_mb.toFixed(2), "lightgreen"));
 	    }
 	    if (line.n_peak_mb < 1.0) {
 		s += '<td></td>';
+		memory_bars.push(null);
 	    } else {
-		s += `<td align="right"><font color="${MemoryColor}">${line.n_peak_mb.toFixed(0)}MB&nbsp;</font></td>`;
+		s += `<td align="right">`; // <font style="font-size: small" color="${MemoryColor}">${line.n_peak_mb.toFixed(0)}MB&nbsp;</font></td>`;
+		s += `<span style="height: 10; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
+		memory_bars.push(makeMemoryBar(line.n_peak_mb.toFixed(0), "peak", prof.max_footprint_mb.toFixed(2), "darkgreen"));
+		
+		s += '</td>';
 	    }
-	    s += `<td><span style="height:10" id="plot${plots.length}"></span>`;	    
+	    s += `<td><span style="height:10" id="memory_sparkline${memory_sparklines.length}"></span>`;	    
 	    if (line.n_usage_fraction >= 0.01) {
-		s += `${(100 * line.n_usage_fraction).toFixed(0)}%`;
+		s += `<font style="font-size: small">${(100 * line.n_usage_fraction).toFixed(0)}%</font>`;
 	    }
 	    s += '</td>';
 	    if (line.memory_samples.length > 0) {
-		plots.push(makePlot(line.memory_samples));
-		// plots.push(null);
+		memory_sparklines.push(makePlot(line.memory_samples));
+		// memory_sparklines.push(null);
 	    } else {
-		plots.push(null);
+		memory_sparklines.push(null);
 	    }
 	    if (line.n_copy_mb_s < 1.0) {
 		s += '<td></td>';
@@ -243,17 +280,24 @@ async function display(prof) {
     s += '</div>';
     const p = document.getElementById('profile');
     p.innerHTML = s;
-    plots.forEach((p, index) => {
+    memory_sparklines.forEach((p, index) => {
 	if (p) {
 	    (async () => {
-		await vegaEmbed(`#plot${index}`, p, {"actions" : false });
+		await vegaEmbed(`#memory_sparkline${index}`, p, {"actions" : false });
 	    })();
 	}
     });
-    bars.forEach((p, index) => {
+    cpu_bars.forEach((p, index) => {
 	if (p) {
 	    (async () => {
-		await vegaEmbed(`#bars${index}`, p, {"actions" : false });
+		await vegaEmbed(`#cpu_bar${index}`, p, {"actions" : false });
+	    })();
+	}
+    });
+    memory_bars.forEach((p, index) => {
+	if (p) {
+	    (async () => {
+		await vegaEmbed(`#memory_bar${index}`, p, {"actions" : false });
 	    })();
 	}
     });
