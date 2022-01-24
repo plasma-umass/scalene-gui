@@ -136,9 +136,11 @@ async function display(prof) {
 //	{ title: ["", "native"], color: CPUColor },
 //	{ title: ["", "system"], color: CPUColor },
 	{ title: ["memory", "Python"], color: MemoryColor },
+	{ title: ["", "average"], color: MemoryColor },
 	{ title: ["", "peak"], color: MemoryColor },
 	{ title: ["", "timeline/%"], color: MemoryColor },
 	{ title: ["copy", "(MB/s)"], color: CopyColor },
+	{ title: ["gpu", ""], color: CopyColor },
 	{ title: ["", ""], color: "black" },
     ];
     let plots = [];
@@ -197,10 +199,15 @@ async function display(prof) {
 	    } else {
 		s += `<td align="right"><font color="${MemoryColor}">${(100 * line.n_python_fraction).toFixed(0)}%&nbsp;</font></td>`;
 	    }
+	    if (line.n_avg_mb < 1.0) {
+		s += '<td></td>';
+	    } else {
+		s += `<td align="right"><font color="${MemoryColor}">${line.n_avg_mb.toFixed(0)}MB&nbsp;</font></td>`;
+	    }
 	    if (line.n_peak_mb < 1.0) {
 		s += '<td></td>';
 	    } else {
-		s += `<td align="right"><font color="${MemoryColor}">${line.n_peak_mb.toFixed(0)}&nbsp;</font></td>`;
+		s += `<td align="right"><font color="${MemoryColor}">${line.n_peak_mb.toFixed(0)}MB&nbsp;</font></td>`;
 	    }
 	    s += `<td><span style="height:10" id="plot${plots.length}"></span>`;	    
 	    if (line.n_usage_fraction >= 0.01) {
@@ -217,6 +224,11 @@ async function display(prof) {
 		s += '<td></td>';
 	    } else {
 		s += `<td align="right"><font color="${CopyColor}">${line.n_copy_mb_s.toFixed(0)}</font></td>`;
+	    }
+	    if (line.n_gpu_percent < 1.0) {
+		s += '<td></td>';
+	    } else {
+		s += `<td align="right"><font color="${CopyColor}">${line.n_gpu_percent.toFixed(0)}</font></td>`;
 	    }
 	    s += `<td align="right"><font color="gray" style="font-size: 70%" >${line.lineno}&nbsp;</font></td>`;
 	    const codeLine = Prism.highlight(line.line, Prism.languages.python, 'python');
