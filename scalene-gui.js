@@ -6,7 +6,7 @@ function makeBar(python, native, system) {
 		"stroke" : "transparent"
 	    }
 	},
-	"width": 75,
+	"width": "container",
 	"height" : "container",
 	"padding": 0,
 	"data": {
@@ -28,7 +28,7 @@ function makeBar(python, native, system) {
 }
 
 
-function makeMemoryBar(memory, title, total, color) {
+function makeMemoryBar(memory, title, python_percent, total, color) {
     return {
 	"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
 	"config": {
@@ -36,11 +36,12 @@ function makeMemoryBar(memory, title, total, color) {
 		"stroke" : "transparent"
 	    }
 	},
-	"width": 75,
+	"width": "container",
 	"height" : "container",
 	"padding": 0,
 	"data": {
-	    "values": [{"x" : 0, "y" : memory, "c": memory + "MB" }]
+	    "values": [{"x" : 0, "y" : python_percent * memory, "c": "Python: " + (python_percent * memory).toFixed(1) + "MB" },
+		       {"x" : 0, "y" : (1.0 - python_percent) * memory, "c": "native: " + ((1.0 - python_percent) * memory).toFixed(1) + "MB" }]
 	},
 	"mark": { "type" : "bar" },
 	"encoding": {
@@ -59,87 +60,41 @@ function makeMemoryBar(memory, title, total, color) {
 function makePlot(samples) {
 //    const maxHeight = 20; // TESTME
     const values = samples.map((v, i) => {
-	return {"x": i, "y": v};
+	return {"x": i, "y": v, "c": 0};
     });
     return {
-	"$schema": "https://vega.github.io/schema/vega/v5.json",
-	"description": "Memory consumption over time.",
+	"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+	// "description": "Memory consumption over time.",
+	"config": {
+	    "view": {
+		"stroke" : "transparent"
+	    }
+	},
 	"width": 75,
 	"height": 10,
 	"padding": 0,
-  "signals": [
-    {
-      "name": "interpolate",
-      "value": "monotone"
+	"data": {
+	    "values": values
+	},
+	"mark" : "line",
+	"encoding" : {
+	    "x" : {"field": "x",
+		   "type" : "temporal",
+		   "axis" : false},
+	    "y" : {"field": "y",
+		   "type" : "quantitative",
+		   "axis" : false},
+	    "color" : {
+		"field" : "c",
+		"type" : "nominal",
+		"legend" : false,
+		"scale" : {
+		    "range": ["darkgreen"]
+		}
+	    }
+	},
     }
-  ],
-
-  "data": [
-    {
-      "name": "table",
-      "values": values
-    }
-  ],
-  "scales": [
-    {
-      "name": "x",
-      "type": "point",
-      "range": "width",
-	"domain": {"data": "table", "field": "x"}
-    },
-    {
-      "name": "y",
-      "type": "linear",
-      "range": "height",
-      "nice": true,
-      "zero": true,
-	// "domain": [0, maxHeight] // {"data": "table", "field": "y"}
-	"domain": {"data": "table", "field": "y"}
-    },
-    {
-      "name": "color",
-      "type": "ordinal",
-      "range": "category",
-      "domain": {"data": "table", "field": "c"}
-    }
-  ],
-
-  "marks": [
-    {
-      "type": "group",
-      "from": {
-        "facet": {
-          "name": "series",
-          "data": "table",
-          "groupby": "c"
-        }
-      },
-      "marks": [
-        {
-          "type": "line",
-          "from": {"data": "series"},
-          "encode": {
-            "enter": {
-              "x": {"scale": "x", "field": "x"},
-              "y": {"scale": "y", "field": "y"},
-              "stroke": {"scale": "color", "field": "c"},
-              "strokeWidth": {"value": 2}
-            },
-            "update": {
-              "interpolate": {"signal": "interpolate"},
-              "strokeOpacity": {"value": 1}
-            },
-            "hover": {
-              "strokeOpacity": {"value": 0.5}
-            }
-          }
-        }
-      ]
-    }
-  ]
 }
-}
-
 
 function addListeners() {
     const fileSelector = document.getElementById('select_file');
@@ -163,8 +118,7 @@ async function display(prof) {
 	{ title : ["time", ""], color: CPUColor },
 //	{ title: ["", "native"], color: CPUColor },
 //	{ title: ["", "system"], color: CPUColor },
-	{ title: ["memory", "Python"], color: MemoryColor },
-	{ title: ["", "average"], color: MemoryColor },
+	{ title: ["memory", "average"], color: MemoryColor },
 	{ title: ["", "peak"], color: MemoryColor },
 	{ title: ["", "timeline/%"], color: MemoryColor },
 	{ title: ["copy", "(MB/s)"], color: CopyColor },
@@ -181,7 +135,7 @@ async function display(prof) {
     for (const f in prof.files) {
 	s += `<p class="text-center"><code>${f}</code>: % of time = ${prof.files[f].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</p>`
 	s += '<div>';
-	s += '<table class="profile table-hover table-condensed">';
+	s += '<table class="profile table table-hover table-condensed">';
 	s += '<thead class="thead-light">';
 	s += '<tr>';
 	for (const col of columns) {
@@ -204,7 +158,7 @@ async function display(prof) {
 	    prevLineno = line.lineno;
 	    s += '<tr>';
 	    s += '<td style="height: 10; vertical-align: middle" align="left">';
-	    s += `<span style="height: 10; vertical-align: middle" id="cpu_bar${cpu_bars.length}"></span>`;
+	    s += `<span style="height: 10; width: 100; vertical-align: middle" id="cpu_bar${cpu_bars.length}"></span>`;
 	    cpu_bars.push(makeBar(line.n_cpu_percent_python, line.n_cpu_percent_c, line.n_sys_percent));
 	    // bars.push(null);
 	    if (false) {
@@ -223,26 +177,28 @@ async function display(prof) {
 		    s += `<td align="right"><font color="${CPUColor}">${(line.n_sys_percent).toFixed(0)}%</font></td>`;
 		}
 	    }
-	    if (line.n_python_fraction < 0.01) {
-		s += '<td></td>';
-	    } else {
-		s += `<td align="right"><font style="font-size: small" color="${MemoryColor}">${(100 * line.n_python_fraction).toFixed(0)}%&nbsp;</font></td>`;
+	    if (false) {
+		if (line.n_python_fraction < 0.01) {
+		    s += '<td></td>';
+		} else {
+		    s += `<td align="right"><font style="font-size: small" color="${MemoryColor}">${(100 * line.n_python_fraction).toFixed(0)}%&nbsp;</font></td>`;
+		}
 	    }
 	    if (line.n_avg_mb < 1.0) {
 		s += '<td></td>';
 	    } else {
-		s += `<td align="right">`; // <font style="font-size: small" color="${MemoryColor}">${line.n_avg_mb.toFixed(0)}MB&nbsp;</font></td>`;
-		s += `<span style="height: 10; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
+		s += `<td style="height: 10; vertical-align: middle" align="left">`; // <font style="font-size: small" color="${MemoryColor}">${line.n_avg_mb.toFixed(0)}MB&nbsp;</font></td>`;
+		s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
 		s += '</td>';
-		memory_bars.push(makeMemoryBar(line.n_avg_mb.toFixed(0), "average", prof.max_footprint_mb.toFixed(2), "lightgreen"));
+		memory_bars.push(makeMemoryBar(line.n_avg_mb.toFixed(0), "average memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
 	    }
 	    if (line.n_peak_mb < 1.0) {
 		s += '<td></td>';
 		memory_bars.push(null);
 	    } else {
-		s += `<td align="right">`; // <font style="font-size: small" color="${MemoryColor}">${line.n_peak_mb.toFixed(0)}MB&nbsp;</font></td>`;
-		s += `<span style="height: 10; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
-		memory_bars.push(makeMemoryBar(line.n_peak_mb.toFixed(0), "peak", prof.max_footprint_mb.toFixed(2), "darkgreen"));
+		s += `<td style="height: 10; vertical-align: middle" align="left">`;
+		s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
+		memory_bars.push(makeMemoryBar(line.n_peak_mb.toFixed(0), "peak memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
 		
 		s += '</td>';
 	    }
