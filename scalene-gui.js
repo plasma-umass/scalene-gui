@@ -1,3 +1,106 @@
+function makeBar(python, native, system) {
+    return {
+	"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+	"config": {
+	    "view": {
+		"stroke" : "transparent"
+	    }
+	},
+	"width": 75,
+	"height" : 10,
+	"padding": 0,
+	"data": {
+	    "values": [{"x" : 0, "y" : python.toFixed(1), "c": "Python " + python.toFixed(1) + "%" },
+		       {"x" : 0, "y" : native.toFixed(1), "c": "native " + native.toFixed(1) + "%" },
+		       {"x" : 0, "y" : system.toFixed(1), "c": "system " + system.toFixed(1) + "%" }]
+	},
+	"mark": { "type" : "bar" },
+	"encoding": {
+	    "x": {"aggregate": "sum", "field": "y", "axis": false,
+		  "scale" : { "domain" : [0, 100] } },
+	    "color": {"field": "c", "type": "nominal", "legend" : false,
+		      "scale": { "range": ["red", "lightgreen", "black"] } },
+	    "tooltip" : [
+		{ "field" : "c", "type" : "nominal", "title" : "time" }
+	    ]
+	},
+    };
+}
+
+function makeBar1(samples) {
+    return {
+	"$schema": "https://vega.github.io/schema/vega/v5.json",
+	// "description": "Memory consumption over time.",
+	"width": 100,
+	"height": 100,
+	"padding": 0,
+	"data" : [
+	    { "name" : "table",
+	      "values": [{"x" : 0, "y" : 45, "c": 0 },
+			 {"x" : 0, "y" : 10, "c": 1 },
+			 {"x" : 0, "y" : 2, "c": 2 }],
+	      "transform": [
+		  {
+		      "type" : "stack",
+		      "groupby" : ["x"],
+		      "sort": {"field": "c"},
+		      "field" : "y"
+		  }
+	      ]
+	    }
+	],
+	"scales": [
+	    {
+		"name": "y",
+		"type": "linear",
+		"range": "width",
+		"nice": true, "zero": true,
+		"domain": {"data": "table", "field": "y"},
+		"reverse": true
+	    },
+	    {
+		"name": "x",
+		"type": "band",
+		"range": "height",
+		"domain": {"data": "table", "field": "x"},
+		"reverse": true
+	    },
+	    {
+		"name": "color",
+		"type": "ordinal",
+		"range": "category",
+		"domain": {"data": "table", "field": "c"}
+	    }
+	],
+
+//  "axes": [
+//    {"orient": "bottom", "scale": "x", "zindex": 1},
+//    {"orient": "left", "scale": "y", "zindex": 1}
+//  ],
+	
+	"marks" : [
+	    { "type" : "rect",
+	      "from" : { "data" : "table" },
+	      "encode": {
+		  "enter": {
+		      "y": {"scale": "y", "field": "y0"},
+		      "height": {"scale": "x", "band": 1, "offset": -1},
+		      "x": {"scale": "x", "field": "x"},
+		      "y2": {"scale": "y", "field": "y1"},
+		      "fill": {"scale": "color", "field": "c"}
+		  },
+		  "update": {
+		      "fillOpacity": {"value": 1}
+		  },
+		  "hover": {
+		      "fillOpacity": {"value": 0.5}
+		  }
+	      }
+	    }
+	]
+    };
+}
+
 function makePlot(samples) {
 //    const maxHeight = 20; // TESTME
     const values = samples.map((v, i) => {
@@ -104,15 +207,16 @@ async function display(prof) {
     const CopyColor = "deep lemon";
     const columns = [
 	{ title: ["", ""], color: "black" },
-	{ title : ["time", "Python"], color: CPUColor },
-	{ title: ["", "native"], color: CPUColor },
-	{ title: ["", "system"], color: CPUColor },
+	{ title : ["time", ""], color: CPUColor },
+//	{ title: ["", "native"], color: CPUColor },
+//	{ title: ["", "system"], color: CPUColor },
 	{ title: ["memory", "Python"], color: MemoryColor },
 	{ title: ["", "peak"], color: MemoryColor },
 	{ title: ["", "timeline/%"], color: MemoryColor },
-	{ title: ["copy", "(MB/s)"], color: CopyColor }
+	{ title: ["copy", "(MB/s)"], color: CopyColor },
     ];
     let plots = [];
+    let bars = [];
     let s = "";
     s += `<p class="text-center">Memory usage: <span id="plot0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
     plots.push(makePlot(prof.samples));
@@ -142,21 +246,25 @@ async function display(prof) {
 	    }
 	    prevLineno = line.lineno;
 	    s += '<tr>';
-	    s += `<td align="right"><font color="gray">${line.lineno}</font></td>`;
-	    if (line.n_cpu_percent_python < 1.0) {
-		s += '<td></td>';
-	    } else {
-		s += `<td align="right"><font color="${CPUColor}">${line.n_cpu_percent_python.toFixed(0)}%</font></td>`;
-	    }
-	    if (line.n_cpu_percent_c < 1.0) {
-		s += '<td></td>';
-	    } else {
-		s += `<td align="right"><font color="${CPUColor}">${line.n_cpu_percent_c.toFixed(0)}%</font></td>`;
-	    }
-	    if (line.n_sys_percent < 1.0) {
-		s += '<td></td>';
-	    } else {
-		s += `<td align="right"><font color="${CPUColor}">${(line.n_sys_percent).toFixed(0)}%</font></td>`;
+	    s += `<td align="right"><font color="gray">${line.lineno}&nbsp;</font></td>`;
+	    s += '<td align="left">';
+	    s += `<span id="bars${bars.length}"></span>`;
+	    bars.push(makeBar(line.n_cpu_percent_python, line.n_cpu_percent_c, line.n_sys_percent));
+	    if (false) {
+		if (line.n_cpu_percent_python >= 1.0) {
+		    s += `<font color="${CPUColor}">${line.n_cpu_percent_python.toFixed(0)}%</font>`;
+		}
+		s += '</td>';
+		if (line.n_cpu_percent_c < 1.0) {
+		    s += '<td></td>';
+		} else {
+		    s += `<td align="right"><font color="${CPUColor}">${line.n_cpu_percent_c.toFixed(0)}%</font></td>`;
+		}
+		if (line.n_sys_percent < 1.0) {
+		    s += '<td></td>';
+		} else {
+		    s += `<td align="right"><font color="${CPUColor}">${(line.n_sys_percent).toFixed(0)}%</font></td>`;
+		}
 	    }
 	    if (line.n_python_fraction < 0.01) {
 		s += '<td></td>';
@@ -194,13 +302,20 @@ async function display(prof) {
     s += '</div>';
     const p = document.getElementById('profile');
     p.innerHTML = s;
-    let i = 0;
-    for (const p of plots) {
+    plots.forEach((p, index) => {
 	if (p) {
-	    await vegaEmbed(`#plot${i}`, p, {"actions" : false});
+	    (async () => {
+		await vegaEmbed(`#plot${index}`, p, {"actions" : false});
+	    })();
 	}
-	i++;
-    }
+    });
+    bars.forEach((p, index) => {
+	if (p) {
+	    (async () => {
+		await vegaEmbed(`#bars${index}`, p, {"actions" : false});
+	    })();
+	}
+    });
 }
 
 function load(jsonFile) {
