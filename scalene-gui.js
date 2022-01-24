@@ -130,7 +130,7 @@ async function display(prof) {
     console.log(prof);
     const CPUColor = "blue";
     const MemoryColor = "green";
-    const CopyColor = "deep lemon";
+    const CopyColor = "goldenrod"; // "deep lemon";
     const columns = [
 	{ title : ["time", ""], color: CPUColor },
 //	{ title: ["", "native"], color: CPUColor },
