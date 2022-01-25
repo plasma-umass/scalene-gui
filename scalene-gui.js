@@ -64,11 +64,11 @@ function makeSparkline(samples, maximum) {
     return {
 	"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
 	// "description": "Memory consumption over time.",
-	"config": {
-	    "view": {
-		"stroke" : "transparent"
-	    }
-	},
+	//"config": {
+	//    "view": {
+//		"stroke" : "transparent"
+//	    }
+//	},
 	"width": 75,
 	"height": 10,
 	"padding": 0,
@@ -91,7 +91,7 @@ function makeSparkline(samples, maximum) {
 		"scale" : {
 		    "range": ["darkgreen"]
 		}
-	    }
+	    },
 	},
     }
 }
@@ -202,7 +202,7 @@ async function display(prof) {
 		
 		s += '</td>';
 	    }
-	    s += `<td><span style="height:10" id="memory_sparkline${memory_sparklines.length}"></span>`;	    
+	    s += `<td><span style="height:10; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;	    
 	    if (line.n_usage_fraction >= 0.01) {
 		s += `<font style="font-size: small">${(100 * line.n_usage_fraction).toFixed(0)}%</font>`;
 	    }
@@ -261,9 +261,9 @@ async function display(prof) {
 
 function load(jsonFile) {
     (async () => {
-	let resp = await fetch(jsonFile);
-	let prof = await resp.json();
-	await display(prof);
+	// let resp = await fetch(jsonFile);
+	// let prof = await resp.json();
+	await display(profile);
     })();
 }
 
@@ -271,7 +271,7 @@ function doIt() {
     // Disabled for now:
     // addListeners();
     // Read in the example JSON file.
-    load("example.json");
+    load(""); // example.json");
 }
 
 						 
