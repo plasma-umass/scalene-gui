@@ -57,8 +57,7 @@ function makeMemoryBar(memory, title, python_percent, total, color) {
 }
 
 
-function makePlot(samples) {
-//    const maxHeight = 20; // TESTME
+function makeSparkline(samples, maximum) {
     const values = samples.map((v, i) => {
 	return {"x": i, "y": v, "c": 0};
     });
@@ -83,7 +82,8 @@ function makePlot(samples) {
 		   "axis" : false},
 	    "y" : {"field": "y",
 		   "type" : "quantitative",
-		   "axis" : false},
+		   "axis" : false,
+		   "scale" : { "domain" : [0, maximum] }},
 	    "color" : {
 		"field" : "c",
 		"type" : "nominal",
@@ -130,7 +130,7 @@ async function display(prof) {
     let memory_bars = [];
     let s = "";
     s += `<p class="text-center">Memory usage: <span id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
-    memory_sparklines.push(makePlot(prof.samples));
+    memory_sparklines.push(makeSparkline(prof.samples, prof.max_footprint_mb));
     s += '<div class="container-fluid">';
     for (const f in prof.files) {
 	s += `<p class="text-center"><code>${f}</code>: % of time = ${prof.files[f].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</p>`
@@ -208,7 +208,7 @@ async function display(prof) {
 	    }
 	    s += '</td>';
 	    if (line.memory_samples.length > 0) {
-		memory_sparklines.push(makePlot(line.memory_samples));
+		memory_sparklines.push(makeSparkline(line.memory_samples, prof.max_footprint_mb));
 		// memory_sparklines.push(null);
 	    } else {
 		memory_sparklines.push(null);
