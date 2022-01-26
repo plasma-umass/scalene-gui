@@ -259,7 +259,7 @@ async function display(prof) {
     });
 }
 
-function load(jsonFile) {
+function load(profile) {
     (async () => {
 	// let resp = await fetch(jsonFile);
 	// let prof = await resp.json();
@@ -267,11 +267,27 @@ function load(jsonFile) {
     })();
 }
 
+function loadFile() {
+    const input = document.getElementById('fileinput');
+    const file = input.files[0];
+    const fr = new FileReader();
+    fr.onload = doSomething;
+    fr.readAsText(file);
+}
+
+function doSomething(e) {
+    let lines = e.target.result;
+    const profile = JSON.parse(lines);
+    load(profile);
+//    console.log("GOT'EM");
+//    console.log(lines);
+}
+
 function doIt() {
     // Disabled for now:
     // addListeners();
     // Read in the example JSON file.
-    load(""); // example.json");
+//    load(); // example.json");
 }
 
 						 
