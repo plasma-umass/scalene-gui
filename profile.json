@@ -1,4 +1,4 @@
-const profile = {
+{
     "elapsed_time_sec": 13.06929612159729,
     "files": {
         "./test/testme.py": {
