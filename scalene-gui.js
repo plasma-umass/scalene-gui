@@ -1,3 +1,29 @@
+function memorySummary(mallocs, title, topN, topThresholdMb) {
+    let s = "";
+    let i = 0;
+    let output = [];
+    for (const [memStr, lines] of Object.entries(mallocs)) {
+	const mem = parseFloat(memStr);
+	if (mem >= topThresholdMb) {
+	    output.push([mem, lines]);
+	    i++;
+	}
+	if (i > topN) {
+	    break;
+	}
+    }
+    if (output) {
+	s += `<tr><td colspan=2>Top <em>${title}</em> memory consumption:</td></tr>`;
+	for (const [mem, lines] of output) {
+	    for (const l of lines) {
+		s += `<tr><td><font style="font-size: small; font-color: ${MemoryColor}">${l}:</td><td><font style="font-size: small; font-color: ${MemoryColor}">${mem.toFixed(2)} MB</td></tr>`;
+	    }
+	}
+    }
+    return s;
+}
+
+
 function makeBar(python, native, system) {
     return {
 	"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
@@ -196,6 +222,24 @@ function makeProfileLine(line, prof) {
     return s;
 }
 
+function buildAllocationMaps(prof, f) {
+    let averageMallocs = {};
+    let peakMallocs = {};
+    for (const line of prof.files[f].lines) {
+	const avg = parseFloat(line.n_avg_mb);
+	if (!averageMallocs[avg]) {
+	    averageMallocs[avg] = [];
+	}
+	averageMallocs[avg].push(line.lineno);
+	const peak = parseFloat(line.n_peak_mb);
+	if (!peakMallocs[peak]) {
+	    peakMallocs[peak] = [];
+	}
+	peakMallocs[peak].push(line.lineno);
+    }
+    return [averageMallocs, peakMallocs];
+}
+
 async function display(prof) {
     console.log(prof);
     let s = "";
@@ -230,6 +274,17 @@ async function display(prof) {
 	    }
 	}
 	s += '</tbody>';
+	s += '</table>';
+	//// Print out memory consumption top N.
+	const topN = 5; // up to this many
+	const topThresholdMb = 1; // at least this many MB to be reported
+	// Build maps of average and peak allocations.
+	let averageMallocs, peakMallocs;
+	[averageMallocs, peakMallocs] = buildAllocationMaps(prof, f);
+	s += '<table class="profile table table-hover table-condensed">';
+	s += memorySummary(averageMallocs, "average", topN, topThresholdMb);
+	s += '<tr><td></td></tr>';
+	s += memorySummary(peakMallocs, "peak", topN, topThresholdMb);
 	s += '</table>';
 	s += '</div>';
     }
