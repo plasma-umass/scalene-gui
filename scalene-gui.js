@@ -113,20 +113,21 @@ function addListeners() {
 const CPUColor = "blue";
 const MemoryColor = "green";
 const CopyColor = "goldenrod";
-const columns = [
-    { title : ["time", ""], color: CPUColor },
-    { title: ["memory", "average"], color: MemoryColor },
-    { title: ["", "peak"], color: MemoryColor },
-    { title: ["", "timeline/%"], color: MemoryColor },
-    { title: ["copy", "(MB/s)"], color: CopyColor },
-    { title: ["gpu", ""], color: CopyColor },
-    { title: ["", ""], color: "black" },
-];
+let columns = [];
 let memory_sparklines = [];
 let cpu_bars = [];
 let memory_bars = [];
 
-function makeTableHeader(fname) {
+function makeTableHeader(fname, gpu) {
+    columns = [{ title : ["time", ""], color: CPUColor },
+	       { title: ["memory", "average"], color: MemoryColor },
+	       { title: ["", "peak"], color: MemoryColor },
+	       { title: ["", "timeline/%"], color: MemoryColor },
+	       { title: ["copy", "(MB/s)"], color: CopyColor }];
+    if (gpu) {
+	columns.push({ title: ["gpu", ""], color: CopyColor });
+    }
+    columns.push({ title: ["", ""], color: "black" });
     let s = '';
     s += '<thead class="thead-light">';
     s += '<tr>';
@@ -179,12 +180,14 @@ function makeProfileLine(line, prof) {
     if (line.n_copy_mb_s < 1.0) {
 	s += '<td></td>';
     } else {
-	s += `<td align="right"><font color="${CopyColor}">${line.n_copy_mb_s.toFixed(0)}</font></td>`;
+	s += `<td align="right"><font style="font-size: small" color="${CopyColor}">${line.n_copy_mb_s.toFixed(0)}</font></td>`;
     }
-    if (line.n_gpu_percent < 1.0) {
-	s += '<td></td>';
-    } else {
-	s += `<td align="right"><font color="${CopyColor}">${line.n_gpu_percent.toFixed(0)}</font></td>`;
+    if (prof.gpu) {
+	if (line.n_gpu_percent < 1.0) {
+	    s += '<td></td>';
+	} else {
+	    s += `<td align="right"><font color="${CopyColor}">${line.n_gpu_percent.toFixed(0)}</font></td>`;
+	}
     }
     s += `<td align="right" style="vertical-align: top"><font color="gray" style="font-size: 70%; vertical-align: middle" >${line.lineno}&nbsp;</font></td>`;
     const codeLine = Prism.highlight(line.line, Prism.languages.python, 'python');
@@ -204,7 +207,7 @@ async function display(prof) {
 	s += `<p class="text-center"><code>${f}</code>: % of time = ${prof.files[f].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</p>`
 	s += '<div>';
 	s += '<table class="profile table table-hover table-condensed">';
-	s += makeTableHeader(f);
+	s += makeTableHeader(f, prof.gpu);
 	s += '<tbody>';
 	// Print per-line profiles.
 	let prevLineno = -1;
@@ -218,14 +221,13 @@ async function display(prof) {
 	    s += makeProfileLine(line, prof);
 	}
 	// Print out function summaries
-	s += `<tr><td colspan=${columns.length + 1}><hr></td></tr>`;
-	s += `<tr><td colspan=${columns.length}></td><td><font style="font-size: small; font-style: italic">functions:</font></td></tr>`;
-	for (const l in prof.files[f].functions) {
-	    const line = prof.files[f].functions[l];
-	    // Act as if this was a line of source code.
-	    line.line = line.fn_name;
-	    line.lineno = ''; // We need to put the line number into the JSON!
-	    s += makeProfileLine(line, prof);
+	if (prof.files[f].functions) {
+	    s += `<tr><td colspan=${columns.length + 1}><hr></td></tr>`;
+	    s += `<tr><td colspan=${columns.length}></td><td><font style="font-size: small; font-style: italic">functions:</font></td></tr>`;
+	    for (const l in prof.files[f].functions) {
+		const line = prof.files[f].functions[l];
+		s += makeProfileLine(line, prof);
+	    }
 	}
 	s += '</tbody>';
 	s += '</table>';
