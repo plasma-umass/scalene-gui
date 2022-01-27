@@ -128,7 +128,6 @@ let memory_bars = [];
 
 function makeTableHeader(fname) {
     let s = '';
-    s += '<table class="profile table table-hover table-condensed">';
     s += '<thead class="thead-light">';
     s += '<tr>';
     for (const col of columns) {
@@ -200,18 +199,32 @@ async function display(prof) {
     s += `<p class="text-center" style="vertical-align: middle">Memory usage: <span style="height: 10; vertical-align: middle" id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
     memory_sparklines.push(makeSparkline(prof.samples, prof.max_footprint_mb));
     s += '<div class="container-fluid">';
+    // Print profile for each file
     for (const f in prof.files) {
 	s += `<p class="text-center"><code>${f}</code>: % of time = ${prof.files[f].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</p>`
 	s += '<div>';
+	s += '<table class="profile table table-hover table-condensed">';
 	s += makeTableHeader(f);
 	s += '<tbody>';
+	// Print per-line profiles.
 	let prevLineno = -1;
 	for (const l in prof.files[f].lines) {
 	    const line = prof.files[f].lines[l];
+	    // Add a space whenever we skip a line.
 	    if (line.lineno > prevLineno + 1) {
 		s += '<tr><td style="line-height: 1px" colspan="${columns.length+1}">&nbsp;</td></tr>';
 	    }
 	    prevLineno = line.lineno;
+	    s += makeProfileLine(line, prof);
+	}
+	// Print out function summaries
+	s += `<tr><td colspan=${columns.length + 1}><hr></td></tr>`;
+	s += `<tr><td colspan=${columns.length}></td><td><font style="font-size: small; font-style: italic">functions:</font></td></tr>`;
+	for (const l in prof.files[f].functions) {
+	    const line = prof.files[f].functions[l];
+	    // Act as if this was a line of source code.
+	    line.line = line.fn_name;
+	    line.lineno = ''; // We need to put the line number into the JSON!
 	    s += makeProfileLine(line, prof);
 	}
 	s += '</tbody>';
