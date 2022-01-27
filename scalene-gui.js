@@ -110,25 +110,92 @@ function addListeners() {
 	}, false);
 }
 
+const CPUColor = "blue";
+const MemoryColor = "green";
+const CopyColor = "goldenrod";
+const columns = [
+    { title : ["time", ""], color: CPUColor },
+    { title: ["memory", "average"], color: MemoryColor },
+    { title: ["", "peak"], color: MemoryColor },
+    { title: ["", "timeline/%"], color: MemoryColor },
+    { title: ["copy", "(MB/s)"], color: CopyColor },
+    { title: ["gpu", ""], color: CopyColor },
+    { title: ["", ""], color: "black" },
+];
+let memory_sparklines = [];
+let cpu_bars = [];
+let memory_bars = [];
+
+function makeTableHeader(fname) {
+    let s = '';
+    s += '<table class="profile table table-hover table-condensed">';
+    s += '<thead class="thead-light">';
+    s += '<tr>';
+    for (const col of columns) {
+	s += `<th><font style="font-variant: small-caps" color=${col.color}>${col.title[0]}</font></th>`;
+    }
+    s += '</tr>';
+    s += '<tr>';
+    for (const col of columns) {
+	s += `<th><em><font style="font-size: small" color=${col.color}>${col.title[1]}</font></em></th>`;
+    }
+    s += `<th><code>${fname}</code></th></tr>`;
+    s += '</thead>';
+    return s;
+}
+
+function makeProfileLine(line, prof) {
+    let s = '';
+    s += '<tr>';
+    s += '<td style="height: 10; vertical-align: middle" align="left">';
+    s += `<span style="height: 10; width: 100; vertical-align: middle" id="cpu_bar${cpu_bars.length}"></span>`;
+    cpu_bars.push(makeBar(line.n_cpu_percent_python, line.n_cpu_percent_c, line.n_sys_percent));
+    if (line.n_avg_mb < 1.0) {
+	s += '<td></td>';
+    } else {
+	s += `<td style="height: 10; vertical-align: middle" align="left">`;
+	s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
+	s += '</td>';
+	memory_bars.push(makeMemoryBar(line.n_avg_mb.toFixed(0), "average memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
+    }
+    if (line.n_peak_mb < 1.0) {
+	s += '<td></td>';
+	memory_bars.push(null);
+    } else {
+	s += `<td style="height: 10; vertical-align: middle" align="left">`;
+	s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
+	memory_bars.push(makeMemoryBar(line.n_peak_mb.toFixed(0), "peak memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
+	s += '</td>';
+    }
+    s += `<td style='vertical-align: middle'><span style="height:10; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;	    
+    if (line.n_usage_fraction >= 0.01) {
+	s += `<font style="font-size: small">${(100 * line.n_usage_fraction).toFixed(0)}%</font>`;
+    }
+    s += '</td>';
+    if (line.memory_samples.length > 0) {
+	memory_sparklines.push(makeSparkline(line.memory_samples, prof.max_footprint_mb));
+    } else {
+	memory_sparklines.push(null);
+    }
+    if (line.n_copy_mb_s < 1.0) {
+	s += '<td></td>';
+    } else {
+	s += `<td align="right"><font color="${CopyColor}">${line.n_copy_mb_s.toFixed(0)}</font></td>`;
+    }
+    if (line.n_gpu_percent < 1.0) {
+	s += '<td></td>';
+    } else {
+	s += `<td align="right"><font color="${CopyColor}">${line.n_gpu_percent.toFixed(0)}</font></td>`;
+    }
+    s += `<td align="right" style="vertical-align: top"><font color="gray" style="font-size: 70%; vertical-align: middle" >${line.lineno}&nbsp;</font></td>`;
+    const codeLine = Prism.highlight(line.line, Prism.languages.python, 'python');
+    s += `<td style="height:10" align="left" bgcolor="whitesmoke" style="vertical-align: middle"><pre style="height: 10; display: inline; white-space: pre-wrap; overflow-x: auto; border: 0px; vertical-align: middle"><code class="language-python">${codeLine}</code></pre></td>`;
+    s += '</tr>';
+    return s;
+}
+
 async function display(prof) {
     console.log(prof);
-    const CPUColor = "blue";
-    const MemoryColor = "green";
-    const CopyColor = "goldenrod"; // "deep lemon";
-    const columns = [
-	{ title : ["time", ""], color: CPUColor },
-//	{ title: ["", "native"], color: CPUColor },
-//	{ title: ["", "system"], color: CPUColor },
-	{ title: ["memory", "average"], color: MemoryColor },
-	{ title: ["", "peak"], color: MemoryColor },
-	{ title: ["", "timeline/%"], color: MemoryColor },
-	{ title: ["copy", "(MB/s)"], color: CopyColor },
-	{ title: ["gpu", ""], color: CopyColor },
-	{ title: ["", ""], color: "black" },
-    ];
-    let memory_sparklines = [];
-    let cpu_bars = [];
-    let memory_bars = [];
     let s = "";
     s += `<p class="text-center" style="vertical-align: middle">Memory usage: <span style="height: 10; vertical-align: middle" id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
     memory_sparklines.push(makeSparkline(prof.samples, prof.max_footprint_mb));
@@ -136,19 +203,7 @@ async function display(prof) {
     for (const f in prof.files) {
 	s += `<p class="text-center"><code>${f}</code>: % of time = ${prof.files[f].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</p>`
 	s += '<div>';
-	s += '<table class="profile table table-hover table-condensed">';
-	s += '<thead class="thead-light">';
-	s += '<tr>';
-	for (const col of columns) {
-	    s += `<th><font style="font-variant: small-caps" color=${col.color}>${col.title[0]}</font></th>`;
-	}
-	s += '</tr>';
-	s += '<tr>';
-	for (const col of columns) {
-	    s += `<th><em><font style="font-size: small" color=${col.color}>${col.title[1]}</font></em></th>`;
-	}
-	s += `<th><code>${f}</code></th></tr>`;
-	s += '</thead>';
+	s += makeTableHeader(f);
 	s += '<tbody>';
 	let prevLineno = -1;
 	for (const l in prof.files[f].lines) {
@@ -157,78 +212,7 @@ async function display(prof) {
 		s += '<tr><td style="line-height: 1px" colspan="${columns.length+1}">&nbsp;</td></tr>';
 	    }
 	    prevLineno = line.lineno;
-	    s += '<tr>';
-	    s += '<td style="height: 10; vertical-align: middle" align="left">';
-	    s += `<span style="height: 10; width: 100; vertical-align: middle" id="cpu_bar${cpu_bars.length}"></span>`;
-	    cpu_bars.push(makeBar(line.n_cpu_percent_python, line.n_cpu_percent_c, line.n_sys_percent));
-	    // bars.push(null);
-	    if (false) {
-		if (line.n_cpu_percent_python >= 1.0) {
-		    s += `<font color="${CPUColor}">${line.n_cpu_percent_python.toFixed(0)}%</font>`;
-		}
-		s += '</td>';
-		if (line.n_cpu_percent_c < 1.0) {
-		    s += '<td></td>';
-		} else {
-		    s += `<td align="right"><font color="${CPUColor}">${line.n_cpu_percent_c.toFixed(0)}%</font></td>`;
-		}
-		if (line.n_sys_percent < 1.0) {
-		    s += '<td></td>';
-		} else {
-		    s += `<td align="right"><font color="${CPUColor}">${(line.n_sys_percent).toFixed(0)}%</font></td>`;
-		}
-	    }
-	    if (false) {
-		if (line.n_python_fraction < 0.01) {
-		    s += '<td></td>';
-		} else {
-		    s += `<td align="right"><font style="font-size: small" color="${MemoryColor}">${(100 * line.n_python_fraction).toFixed(0)}%&nbsp;</font></td>`;
-		}
-	    }
-	    if (line.n_avg_mb < 1.0) {
-		s += '<td></td>';
-	    } else {
-		s += `<td style="height: 10; vertical-align: middle" align="left">`; // <font style="font-size: small" color="${MemoryColor}">${line.n_avg_mb.toFixed(0)}MB&nbsp;</font></td>`;
-		s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
-		s += '</td>';
-		memory_bars.push(makeMemoryBar(line.n_avg_mb.toFixed(0), "average memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
-	    }
-	    if (line.n_peak_mb < 1.0) {
-		s += '<td></td>';
-		memory_bars.push(null);
-	    } else {
-		s += `<td style="height: 10; vertical-align: middle" align="left">`;
-		s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
-		memory_bars.push(makeMemoryBar(line.n_peak_mb.toFixed(0), "peak memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
-		
-		s += '</td>';
-	    }
-	    s += `<td style='vertical-align: middle'><span style="height:10; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;	    
-	    if (line.n_usage_fraction >= 0.01) {
-		s += `<font style="font-size: small">${(100 * line.n_usage_fraction).toFixed(0)}%</font>`;
-	    }
-	    s += '</td>';
-	    if (line.memory_samples.length > 0) {
-		memory_sparklines.push(makeSparkline(line.memory_samples, prof.max_footprint_mb));
-		// memory_sparklines.push(null);
-	    } else {
-		memory_sparklines.push(null);
-	    }
-	    if (line.n_copy_mb_s < 1.0) {
-		s += '<td></td>';
-	    } else {
-		s += `<td align="right"><font color="${CopyColor}">${line.n_copy_mb_s.toFixed(0)}</font></td>`;
-	    }
-	    if (line.n_gpu_percent < 1.0) {
-		s += '<td></td>';
-	    } else {
-		s += `<td align="right"><font color="${CopyColor}">${line.n_gpu_percent.toFixed(0)}</font></td>`;
-	    }
-	    s += `<td align="right" style="vertical-align: middle"><font color="gray" style="font-size: 70%; vertical-align: middle" >${line.lineno}&nbsp;</font></td>`;
-	    const codeLine = Prism.highlight(line.line, Prism.languages.python, 'python');
-	    s += `<td style="height:10" align="left" bgcolor="whitesmoke" style="vertical-align: middle"><pre style="height: 10; display: inline; white-space: pre-wrap; overflow-x: auto; border: 0px; vertical-align: middle"><code class="language-python">${codeLine}</code></pre></td>`;
-	    // s += `<td align="left" bgcolor="whitesmoke"><pre data-start="${line.lineno}" class="line-numbers"><code class="language-python">${codeLine}</code></pre></div></td>`;
-	    s += '</tr>';
+	    s += makeProfileLine(line, prof);
 	}
 	s += '</tbody>';
 	s += '</table>';
