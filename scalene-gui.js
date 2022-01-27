@@ -2,7 +2,13 @@ function memorySummary(mallocs, title, topN, topThresholdMb) {
     let s = "";
     let i = 0;
     let output = [];
-    for (const [memStr, lines] of Object.entries(mallocs)) {
+    let mallocList = Object.entries(mallocs);
+    mallocList.sort((x, y) => {
+	const xf = parseFloat(x[0]);
+	const yf = parseFloat(y[0]);
+	return yf - xf;
+    });
+    for (const [memStr, lines] of mallocList) {
 	const mem = parseFloat(memStr);
 	if (mem >= topThresholdMb) {
 	    output.push([mem, lines]);
