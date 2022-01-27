@@ -130,7 +130,7 @@ async function display(prof) {
     let cpu_bars = [];
     let memory_bars = [];
     let s = "";
-    s += `<p class="text-center">Memory usage: <span style="vertical-align: middle" id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
+    s += `<p class="text-center" style="vertical-align: middle">Memory usage: <span style="height: 10; vertical-align: middle" id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
     memory_sparklines.push(makeSparkline(prof.samples, prof.max_footprint_mb));
     s += '<div class="container-fluid">';
     for (const f in prof.files) {
