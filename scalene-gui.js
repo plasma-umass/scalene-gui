@@ -61,6 +61,7 @@ function makeSparkline(samples, maximum) {
     const values = samples.map((v, i) => {
 	return {"x": i, "y": v, "c": 0};
     });
+    const strokeWidth = 1; // 0.25;
     return {
 	"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
 	// "description": "Memory consumption over time.",
@@ -75,7 +76,7 @@ function makeSparkline(samples, maximum) {
 	"data": {
 	    "values": values
 	},
-	"mark" : "line",
+	"mark" : { "type" : "line", "strokeWidth": strokeWidth },
 	"encoding" : {
 	    "x" : {"field": "x",
 		   "type" : "temporal",
@@ -129,7 +130,7 @@ async function display(prof) {
     let cpu_bars = [];
     let memory_bars = [];
     let s = "";
-    s += `<p class="text-center">Memory usage: <span id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
+    s += `<p class="text-center">Memory usage: <span style="vertical-align: middle" id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
     memory_sparklines.push(makeSparkline(prof.samples, prof.max_footprint_mb));
     s += '<div class="container-fluid">';
     for (const f in prof.files) {
@@ -202,7 +203,7 @@ async function display(prof) {
 		
 		s += '</td>';
 	    }
-	    s += `<td><span style="height:10; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;	    
+	    s += `<td style='vertical-align: middle'><span style="height:10; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;	    
 	    if (line.n_usage_fraction >= 0.01) {
 		s += `<font style="font-size: small">${(100 * line.n_usage_fraction).toFixed(0)}%</font>`;
 	    }
@@ -223,9 +224,9 @@ async function display(prof) {
 	    } else {
 		s += `<td align="right"><font color="${CopyColor}">${line.n_gpu_percent.toFixed(0)}</font></td>`;
 	    }
-	    s += `<td align="right"><font color="gray" style="font-size: 70%" >${line.lineno}&nbsp;</font></td>`;
+	    s += `<td align="right" style="vertical-align: middle"><font color="gray" style="font-size: 70%; vertical-align: middle" >${line.lineno}&nbsp;</font></td>`;
 	    const codeLine = Prism.highlight(line.line, Prism.languages.python, 'python');
-	    s += `<td style="height:10" align="left" bgcolor="whitesmoke"><pre style="height: 10; display: inline; white-space: pre-wrap; overflow-x: auto; border: 0px;"><code class="language-python">${codeLine}</code></pre></td>`;
+	    s += `<td style="height:10" align="left" bgcolor="whitesmoke" style="vertical-align: middle"><pre style="height: 10; display: inline; white-space: pre-wrap; overflow-x: auto; border: 0px; vertical-align: middle"><code class="language-python">${codeLine}</code></pre></td>`;
 	    // s += `<td align="left" bgcolor="whitesmoke"><pre data-start="${line.lineno}" class="line-numbers"><code class="language-python">${codeLine}</code></pre></div></td>`;
 	    s += '</tr>';
 	}
