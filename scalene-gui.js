@@ -255,7 +255,6 @@ async function display(prof) {
 	cpu_system += percent_time * cs;
 	mem_python += mp;
     }
-    console.log(mem_python);
     cpu_bars.push(makeBar(cpu_python, cpu_native, cpu_system));
     memory_bars.push(makeMemoryBar(max_alloc, "memory", mem_python / max_alloc, max_alloc, "darkgreen"));
     s += '</table>';
@@ -312,7 +311,6 @@ async function display(prof) {
     }
     memory_sparklines.forEach((p, index) => {
 	if (p) {
-	    console.log("memory sparkline " + index);
 	    (async () => {
 		await vegaEmbed(`#memory_sparkline${index}`, p, {"actions" : false });
 	    })();
