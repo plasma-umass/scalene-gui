@@ -173,7 +173,7 @@ function makeProfileLine(line, prof, cpu_bars, memory_bars, memory_sparklines) {
     if (line.n_copy_mb_s < 1.0) {
 	s += '<td style="width: 100"></td>';
     } else {
-	s += `<td style="width: 100" align="right"><font style="font-size: small" color="${CopyColor}">${line.n_copy_mb_s.toFixed(0)}</font></td>`;
+	s += `<td style="width: 100" align="right"><font style="font-size: small" color="${CopyColor}">${line.n_copy_mb_s.toFixed(0)}&nbsp;&nbsp;&nbsp;</font></td>`;
     }
     if (prof.gpu) {
 	if (line.n_gpu_percent < 1.0) {
@@ -244,7 +244,6 @@ async function display(prof) {
     for (const f in prof.files) {
 	let cp = 0; let cn = 0; let cs = 0;
 	let mp = 0;
-	const percent_time = prof.files[f].percent_cpu_time / 100.0;
 	for (const l in prof.files[f].lines) {
 	    const line = prof.files[f].lines[l];
 	    cp += line.n_cpu_percent_python;
@@ -253,12 +252,11 @@ async function display(prof) {
 	    mp += line.n_malloc_mb * line.n_python_fraction;
 	    max_alloc += line.n_malloc_mb;
 	}
-	cpu_python += percent_time * cp;
-	cpu_native += percent_time * cn;
-	cpu_system += percent_time * cs;
+	cpu_python += cp;
+	cpu_native += cn;
+	cpu_system += cs;
 	mem_python += mp;
     }
-
     cpu_bars.push(makeBar(cpu_python, cpu_native, cpu_system));
     memory_bars.push(makeMemoryBar(max_alloc, "memory", mem_python / max_alloc, max_alloc, "darkgreen"));
 
@@ -270,19 +268,23 @@ async function display(prof) {
     s += '</div>';
    
     s += '<div class="container-fluid">';
-   
+
+    // Convert files to an array and sort it in descending order by percent of CPU time.
+    files = Object.entries(prof.files);
+    files.sort((x, y) => { return y[1].percent_cpu_time - x[1].percent_cpu_time; } );
+    
     // Print profile for each file
-    for (const f in prof.files) {
-	s += `<p class="text-center"><font style="font-size: 90%"><code>${f}</code>: % of time = ${prof.files[f].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</font></p>`
+    for (const ff of files) {
+	s += `<p class="text-center"><font style="font-size: 90%"><code>${ff[0]}</code>: % of time = ${ff[1].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</font></p>`
 	s += '<div>';
 	s += `<table class="profile table table-hover table-condensed" id="table-${tableID}">`;
 	tableID++;
-	s += makeTableHeader(f, prof.gpu);
+	s += makeTableHeader(ff[0], prof.gpu);
 	s += '<tbody>';
 	// Print per-line profiles.
 	let prevLineno = -1;
-	for (const l in prof.files[f].lines) {
-	    const line = prof.files[f].lines[l];
+	for (const l in ff[1].lines) {
+	    const line = ff[1].lines[l];
 	    // Add a space whenever we skip a line.
 	    if (line.lineno > prevLineno + 1) {
 		s += '<tr>';
@@ -299,12 +301,12 @@ async function display(prof) {
 	s += '</table>';
 	// Print out function summaries.
 	s += `<table class="profile table table-hover table-condensed" id="table-${tableID}">`;
-	s += makeTableHeader(f, prof.gpu, true);
+	s += makeTableHeader(ff[0], prof.gpu, true);
 	s += '<tbody>';
 	tableID++;
-	if (prof.files[f].functions) {
-	    for (const l in prof.files[f].functions) {
-		const line = prof.files[f].functions[l];
+	if (prof.files[ff[0]].functions) {
+	    for (const l in prof.files[ff[0]].functions) {
+		const line = prof.files[ff[0]].functions[l];
 		s += makeProfileLine(line, prof, cpu_bars, memory_bars, memory_sparklines);
 	    }
 	}
