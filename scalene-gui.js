@@ -1,35 +1,3 @@
-function memorySummary(mallocs, title, topN, topThresholdMb) {
-    let s = "";
-    let i = 0;
-    let output = [];
-    let mallocList = Object.entries(mallocs);
-    mallocList.sort((x, y) => {
-	const xf = parseFloat(x[0]);
-	const yf = parseFloat(y[0]);
-	return yf - xf;
-    });
-    for (const [memStr, lines] of mallocList) {
-	const mem = parseFloat(memStr);
-	if (mem >= topThresholdMb) {
-	    output.push([mem, lines]);
-	    i++;
-	}
-	if (i > topN) {
-	    break;
-	}
-    }
-    if (output) {
-	s += `<tr><td colspan=2>Top <em>${title}</em> memory consumption:</td></tr>`;
-	for (const [mem, lines] of output) {
-	    for (const l of lines) {
-		s += `<tr><td><font style="font-size: small; font-color: ${MemoryColor}">${l}:</td><td><font style="font-size: small; font-color: ${MemoryColor}">${mem.toFixed(2)} MB</td></tr>`;
-	    }
-	}
-    }
-    return s;
-}
-
-
 function makeBar(python, native, system) {
     return {
 	"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
@@ -129,19 +97,6 @@ function makeSparkline(samples, maximum) {
     }
 }
 
-function addListeners() {
-    const fileSelector = document.getElementById('select_file');
-    const fileElement = document.getElementById('input');
-    
-    fileSelector.addEventListener(
-	'click',
-	(e) => {
-	    if (fileElement) {
-		fileElement.click();
-	    }
-	}, false);
-}
-
 const CPUColor = "blue";
 const MemoryColor = "green";
 const CopyColor = "goldenrod";
@@ -170,9 +125,9 @@ function makeTableHeader(fname, gpu, functions = false) {
     s += '<thead class="thead-light">';
     s += '<tr data-sort-method="thead">';
     for (const col of columns) {
-	s += `<th><font style="font-variant: small-caps; width:${col.width}" color=${col.color}>${col.title[0]}</font></th>`;
+	s += `<th><font style="font-variant: small-caps; text-decoration: underline; width:${col.width}" color=${col.color}>${col.title[0]}</font></th>`;
     }
-    s += `<th><font style="font-variant: small-caps">${tableTitle}</font></th>`;
+    s += `<th><font style="font-variant: small-caps; text-decoration: underline">${tableTitle}</font></th>`;
     s += '</tr>';
     s += '<tr data-sort-method="thead">';
     for (const col of columns) {
@@ -301,18 +256,6 @@ async function display(prof) {
 	}
 	s += '</table>';
 	s += '</div>';
-	if (false) {
-	    //// Print out memory consumption top N.
-	    const topN = 5; // up to this many
-	    const topThresholdMb = 1; // at least this many MB to be reported
-	    // Build maps of average and peak allocations.
-	    let averageMallocs, peakMallocs;
-	    [averageMallocs, peakMallocs] = buildAllocationMaps(prof, f);
-	    s += '<table class="profile table table-hover table-condensed">';
-	    s += memorySummary(averageMallocs, "average", topN, topThresholdMb);
-	    s += '<tr><td></td></tr>';
-	    s += memorySummary(peakMallocs, "peak", topN, topThresholdMb);
-	}
     }
     s += '</div>';
     const p = document.getElementById('profile');
