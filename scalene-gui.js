@@ -107,6 +107,7 @@ const CPUColor = "blue";
 const MemoryColor = "green";
 const CopyColor = "goldenrod";
 let columns = [];
+
 let memory_sparklines = [];
 let cpu_bars = [];
 let memory_bars = [];
@@ -211,7 +212,9 @@ function buildAllocationMaps(prof, f) {
 }
 
 async function display(prof) {
-    console.log(prof);
+    memory_sparklines = [];
+    cpu_bars = [];
+    memory_bars = [];
     let tableID = 0;
     let s = "";
     s += '<div class="row justify-content-center">';
@@ -309,6 +312,7 @@ async function display(prof) {
     }
     memory_sparklines.forEach((p, index) => {
 	if (p) {
+	    console.log("memory sparkline " + index);
 	    (async () => {
 		await vegaEmbed(`#memory_sparkline${index}`, p, {"actions" : false });
 	    })();
