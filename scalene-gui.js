@@ -318,7 +318,7 @@ async function display(prof) {
     const p = document.getElementById('profile');
     p.innerHTML = s;
     for (let i = 0; i < tableID; i++) {
-	new Tablesort(document.getElementById(`table-${i}`));
+	new Tablesort(document.getElementById(`table-${i}`), { "descending" : true });
     }
     memory_sparklines.forEach((p, index) => {
 	if (p) {
