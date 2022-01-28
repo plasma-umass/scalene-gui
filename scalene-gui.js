@@ -211,9 +211,14 @@ async function display(prof) {
     console.log(prof);
     let tableID = 0;
     let s = "";
+    s += '<p class="text-center"><font style="font-size: small">Time: <font color="darkblue">Python</font> | <font color="lightblue">native</font> | <font color="blue">system</font><br /><font style="color: white">Time:&nbsp;</font></font><span style="height: 10; width: 150; vertical-align: middle" id="cpu_bar0"></span></p>';
+    cpu_bars.push(makeBar(33, 33, 33));
+
     s += `<p class="text-center" style="vertical-align: middle">Memory usage: <span style="height: 10; vertical-align: middle" id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
     memory_sparklines.push(makeSparkline(prof.samples, prof.max_footprint_mb));
+    
     s += '<div class="container-fluid">';
+   
     // Print profile for each file
     for (const f in prof.files) {
 	s += `<p class="text-center"><code>${f}</code>: % of time = ${prof.files[f].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</p>`
