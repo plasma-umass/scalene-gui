@@ -274,8 +274,9 @@ async function display(prof) {
     files.sort((x, y) => { return y[1].percent_cpu_time - x[1].percent_cpu_time; } );
     
     // Print profile for each file
+    let fileIteration = 0;
     for (const ff of files) {
-	s += `<p class="text-center"><font style="font-size: 90%"><code>${ff[0]}</code>: % of time = ${ff[1].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</font></p>`
+	s += `<p class="text-left"><font style="font-size: 90%"><code>${ff[0]}</code>: % of time = ${ff[1].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</font></p>`
 	s += '<div>';
 	s += `<table class="profile table table-hover table-condensed" id="table-${tableID}">`;
 	tableID++;
@@ -312,6 +313,11 @@ async function display(prof) {
 	}
 	s += '</table>';
 	s += '</div>';
+	fileIteration++;
+	// Insert empty lines between files.
+	if (fileIteration < files.length) {
+	    s += '<p />&nbsp;<hr><p />&nbsp;<p />';
+	}
     }
     s += '</div>';
     const p = document.getElementById('profile');
