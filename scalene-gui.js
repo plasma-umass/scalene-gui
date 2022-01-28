@@ -156,7 +156,6 @@ function makeProfileLine(line, prof) {
     s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
     s += '</td>';
     memory_bars.push(makeMemoryBar(line.n_avg_mb.toFixed(0), "average memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
-    console.log(line.n_avg_mb.toFixed(0), parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2));
     s += `<td style="height: 10; width: 100; vertical-align: middle" align="left" data-sort='${String(line.n_peak_mb.toFixed(0)).padStart(10, '0')}'>`;
     s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
     memory_bars.push(makeMemoryBar(line.n_peak_mb.toFixed(0), "peak memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
@@ -220,8 +219,34 @@ async function display(prof) {
     s += '<td width="10"></td>';
     s += `<td><font style="font-size: small"><b>Memory:</b> <font color="darkgreen">Python</font> | <font color="lightgreen">native</font><br /></font><span style="height: 10; width: 150; vertical-align: middle" id="memory_bar${memory_bars.length}"></span></td>`;
     s += '</tr>';
-    cpu_bars.push(makeBar(33, 33, 33));
-    memory_bars.push(makeMemoryBar(100, "memory", 0.5, 100, "darkgreen"));
+
+    // Compute overall usage.
+    let cpu_python = 0;
+    let cpu_native = 0;
+    let cpu_system = 0;
+    let mem_python = 0;
+    let mem_native = 0;
+    let max_alloc = 0;
+    for (const f in prof.files) {
+	let cp = 0; let cn = 0; let cs = 0;
+	let mp = 0;
+	const percent_time = prof.files[f].percent_cpu_time / 100.0;
+	for (const l in prof.files[f].lines) {
+	    const line = prof.files[f].lines[l];
+	    cp += line.n_cpu_percent_python;
+	    cn += line.n_cpu_percent_c;
+	    cs += line.n_sys_percent;
+	    mp += line.n_malloc_mb * line.n_python_fraction;
+	    max_alloc += line.n_malloc_mb;
+	}
+	cpu_python += percent_time * cp;
+	cpu_native += percent_time * cn;
+	cpu_system += percent_time * cs;
+	mem_python += mp;
+    }
+    console.log(mem_python);
+    cpu_bars.push(makeBar(cpu_python, cpu_native, cpu_system));
+    memory_bars.push(makeMemoryBar(max_alloc, "memory", mem_python / max_alloc, max_alloc, "darkgreen"));
     s += '</table>';
     s += '</div>';
     s += '</div>';
