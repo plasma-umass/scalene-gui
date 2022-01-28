@@ -170,7 +170,7 @@ function makeProfileLine(line, prof) {
     }
     s += '<td style="width: 100" align="right">';
     if (line.n_usage_fraction >= 0.01) {
-	s += `<font style="font-size: small">${String((100 * line.n_usage_fraction).toFixed(0)).padStart(10, ' ')}%</font>`;
+	s += `<font style="font-size: small">${String((100 * line.n_usage_fraction).toFixed(0)).padStart(10, ' ')}%&nbsp;&nbsp;&nbsp;</font>`;
     }
     s += '</td>';
     if (line.n_copy_mb_s < 1.0) {
