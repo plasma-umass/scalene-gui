@@ -156,6 +156,7 @@ function makeProfileLine(line, prof) {
     s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
     s += '</td>';
     memory_bars.push(makeMemoryBar(line.n_avg_mb.toFixed(0), "average memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
+    console.log(line.n_avg_mb.toFixed(0), parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2));
     s += `<td style="height: 10; width: 100; vertical-align: middle" align="left" data-sort='${String(line.n_peak_mb.toFixed(0)).padStart(10, '0')}'>`;
     s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
     memory_bars.push(makeMemoryBar(line.n_peak_mb.toFixed(0), "peak memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
@@ -211,8 +212,13 @@ async function display(prof) {
     console.log(prof);
     let tableID = 0;
     let s = "";
-    s += '<p class="text-center"><font style="font-size: small">Time: <font color="darkblue">Python</font> | <font color="lightblue">native</font> | <font color="blue">system</font><br /><font style="color: white">Time:&nbsp;</font></font><span style="height: 10; width: 150; vertical-align: middle" id="cpu_bar0"></span></p>';
+    s += '<p class="text-center">';
+    s += `<font style="font-size: small">Time: <font color="darkblue">Python</font> | <font color="lightblue">native</font> | <font color="blue">system</font><br /></font><span style="height: 10; width: 150; vertical-align: middle" id="cpu_bar${cpu_bars.length}"></span>`;
+    s += '<br />';
+    s += `<font style="font-size: small">Memory: <font color="darkgreen">Python</font> | <font color="lightgreen">native</font><br /></font><span style="height: 10; width: 150; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
+    s += '</p>';
     cpu_bars.push(makeBar(33, 33, 33));
+    memory_bars.push(makeMemoryBar(100, "memory", 0.5, 100, "darkgreen"));
 
     s += `<p class="text-center" style="vertical-align: middle">Memory usage: <span style="height: 10; vertical-align: middle" id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
     memory_sparklines.push(makeSparkline(prof.samples, prof.max_footprint_mb));
