@@ -121,7 +121,8 @@ function makeTableHeader(fname, gpu, functions = false) {
     columns = [{ title : ["time", ""], color: CPUColor, width: 0 },
 	       { title: ["memory", "average"], color: MemoryColor, width: 0 },
 	       { title: ["memory", "peak"], color: MemoryColor, width: 0 },
-	       { title: ["memory", "timeline/%"], color: MemoryColor, width: 0 },
+	       { title: ["memory", "timeline"], color: MemoryColor, width: 0 },
+	       { title: ["memory", "percent"], color: MemoryColor, width: 0 },
 	       { title: ["copy", "(MB/s)"], color: CopyColor, width: 0 }];
     if (gpu) {
 	columns.push({ title: ["gpu", ""], color: CopyColor, width: 0 });
@@ -131,7 +132,7 @@ function makeTableHeader(fname, gpu, functions = false) {
     s += '<thead class="thead-light">';
     s += '<tr data-sort-method="thead">';
     for (const col of columns) {
-	s += `<th style="width:${col.width}"><font style="font-variant: small-caps; text-decoration: underline; width:${col.width}" color=${col.color}>${col.title[0]}</font></th>`;
+	s += `<th style="width:${col.width}"><font style="font-variant: small-caps; text-decoration: underline; width:${col.width}" color=${col.color}>${col.title[0]}</font>&nbsp;&nbsp;</th>`;
     }
     s += `<th style="width:10000"><font style="font-variant: small-caps; text-decoration: underline">${tableTitle}</font></th>`;
     s += '</tr>';
@@ -160,16 +161,18 @@ function makeProfileLine(line, prof) {
     s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
     memory_bars.push(makeMemoryBar(line.n_peak_mb.toFixed(0), "peak memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
     s += '</td>';
-    s += `<td style='vertical-align: middle; width: 150'><span style="height:10; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;	    
-    if (line.n_usage_fraction >= 0.01) {
-	s += `<font style="font-size: small">${(100 * line.n_usage_fraction).toFixed(0)}%</font>`;
-    }
+    s += `<td style='vertical-align: middle; width: 100'><span style="height:10; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;	    
     s += '</td>';
     if (line.memory_samples.length > 0) {
 	memory_sparklines.push(makeSparkline(line.memory_samples, prof.max_footprint_mb));
     } else {
 	memory_sparklines.push(null);
     }
+    s += '<td style="width: 100" align="right">';
+    if (line.n_usage_fraction >= 0.01) {
+	s += `<font style="font-size: small">${String((100 * line.n_usage_fraction).toFixed(0)).padStart(10, ' ')}%</font>`;
+    }
+    s += '</td>';
     if (line.n_copy_mb_s < 1.0) {
 	s += '<td style="width: 100"></td>';
     } else {
@@ -218,6 +221,11 @@ async function display(prof) {
     s += `<td><font style="font-size: small"><b>Time:</b> <font color="darkblue">Python</font> | <font color="lightblue">native</font> | <font color="blue">system</font><br /></font><span style="height: 10; width: 200; vertical-align: middle" id="cpu_bar${cpu_bars.length}"></span></td>`;
     s += '<td width="10"></td>';
     s += `<td><font style="font-size: small"><b>Memory:</b> <font color="darkgreen">Python</font> | <font color="lightgreen">native</font><br /></font><span style="height: 10; width: 150; vertical-align: middle" id="memory_bar${memory_bars.length}"></span></td>`;
+    s += '<td width="10"></td>';
+    s += '<td valign="middle">';
+    s += `<font style="font-size: small"><b>Memory usage: </b><span style="height: 10; vertical-align: middle" id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth: ${prof.growth_rate.toFixed(2)}%)</font>`;
+    memory_sparklines.push(makeSparkline(prof.samples, prof.max_footprint_mb));
+    s += '</td>';
     s += '</tr>';
 
     // Compute overall usage.
@@ -250,14 +258,12 @@ async function display(prof) {
     s += '</table>';
     s += '</div>';
     s += '</div>';
-    s += `<p class="text-center" style="vertical-align: middle">Memory usage: <span style="height: 10; vertical-align: middle" id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
-    memory_sparklines.push(makeSparkline(prof.samples, prof.max_footprint_mb));
     
     s += '<div class="container-fluid">';
    
     // Print profile for each file
     for (const f in prof.files) {
-	s += `<p class="text-center"><code>${f}</code>: % of time = ${prof.files[f].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</p>`
+	s += `<p class="text-center"><font style="font-size: 90%"><code>${f}</code>: % of time = ${prof.files[f].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</font></p>`
 	s += '<div>';
 	s += `<table class="profile table table-hover table-condensed" id="table-${tableID}">`;
 	tableID++;
