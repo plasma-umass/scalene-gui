@@ -212,14 +212,19 @@ async function display(prof) {
     console.log(prof);
     let tableID = 0;
     let s = "";
-    s += '<p class="text-center">';
-    s += `<font style="font-size: small">Time: <font color="darkblue">Python</font> | <font color="lightblue">native</font> | <font color="blue">system</font><br /></font><span style="height: 10; width: 150; vertical-align: middle" id="cpu_bar${cpu_bars.length}"></span>`;
-    s += '<br />';
-    s += `<font style="font-size: small">Memory: <font color="darkgreen">Python</font> | <font color="lightgreen">native</font><br /></font><span style="height: 10; width: 150; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
-    s += '</p>';
+    s += '<div class="row justify-content-center">';
+    s += '<div class="col-auto">';
+    s += '<table width="50%" class="table text-center table-condensed">';
+    // s += '<tr><td><b>Key:</b></td>';
+    s += `<td><font style="font-size: small"><b>Time:</b> <font color="darkblue">Python</font> | <font color="lightblue">native</font> | <font color="blue">system</font><br /></font><span style="height: 10; width: 200; vertical-align: middle" id="cpu_bar${cpu_bars.length}"></span></td>`;
+    s += '<td width="10"></td>';
+    s += `<td><font style="font-size: small"><b>Memory:</b> <font color="darkgreen">Python</font> | <font color="lightgreen">native</font><br /></font><span style="height: 10; width: 150; vertical-align: middle" id="memory_bar${memory_bars.length}"></span></td>`;
+    s += '</tr>';
     cpu_bars.push(makeBar(33, 33, 33));
     memory_bars.push(makeMemoryBar(100, "memory", 0.5, 100, "darkgreen"));
-
+    s += '</table>';
+    s += '</div>';
+    s += '</div>';
     s += `<p class="text-center" style="vertical-align: middle">Memory usage: <span style="height: 10; vertical-align: middle" id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
     memory_sparklines.push(makeSparkline(prof.samples, prof.max_footprint_mb));
     
