@@ -233,7 +233,7 @@ async function display(prof) {
     s += '<td align="left"><span style="vertical-align: top" height: 15; id="memory_sparkline0"></span></td>';
     memory_sparklines.push(makeSparkline(prof.samples, prof.max_footprint_mb, 15, 200));
     s += '</tr>';
-
+    
     // Compute overall usage.
     let cpu_python = 0;
     let cpu_native = 0;
@@ -261,10 +261,14 @@ async function display(prof) {
 
     cpu_bars.push(makeBar(cpu_python, cpu_native, cpu_system));
     memory_bars.push(makeMemoryBar(max_alloc, "memory", mem_python / max_alloc, max_alloc, "darkgreen"));
+
+    s += '<tr><td colspan="10">';
+    s += `<p class="text-center"><font style="font-size: 90%; font-style: italic; font-color: darkgray">hover over bars to see breakdowns; click on <font style="font-variant:small-caps; text-decoration:underline">column headers</font> to sort.</font></p>`;
+    s += '</td></tr>';
     s += '</table>';
     s += '</div>';
     s += '</div>';
-    
+   
     s += '<div class="container-fluid">';
    
     // Print profile for each file
