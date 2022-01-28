@@ -150,24 +150,31 @@ let memory_sparklines = [];
 let cpu_bars = [];
 let memory_bars = [];
 
-function makeTableHeader(fname, gpu) {
-    columns = [{ title : ["time", ""], color: CPUColor },
-	       { title: ["memory", "average"], color: MemoryColor },
-	       { title: ["", "peak"], color: MemoryColor },
-	       { title: ["", "timeline/%"], color: MemoryColor },
-	       { title: ["copy", "(MB/s)"], color: CopyColor }];
-    if (gpu) {
-	columns.push({ title: ["gpu", ""], color: CopyColor });
+function makeTableHeader(fname, gpu, functions = false) {
+    let tableTitle;
+    if (functions) {
+	tableTitle = "function profile";
+    } else {
+	tableTitle = "line profile";
     }
-    columns.push({ title: ["", ""], color: "black" });
+    columns = [{ title : ["time", ""], color: CPUColor, width: 100 },
+	       { title: ["memory", "average"], color: MemoryColor, width: 100 },
+	       { title: ["memory", "peak"], color: MemoryColor, width: 100 },
+	       { title: ["memory", "timeline/%"], color: MemoryColor, width: 150 },
+	       { title: ["copy", "(MB/s)"], color: CopyColor, width: 40 }];
+    if (gpu) {
+	columns.push({ title: ["gpu", ""], color: CopyColor, width: 40 });
+    }
+    columns.push({ title: ["", ""], color: "black", width: 100000 });
     let s = '';
     s += '<thead class="thead-light">';
-    s += '<tr>';
+    s += '<tr data-sort-method="thead">';
     for (const col of columns) {
-	s += `<th><font style="font-variant: small-caps" color=${col.color}>${col.title[0]}</font></th>`;
+	s += `<th><font style="font-variant: small-caps; width:${col.width}" color=${col.color}>${col.title[0]}</font></th>`;
     }
+    s += `<th><font style="font-variant: small-caps">${tableTitle}</font></th>`;
     s += '</tr>';
-    s += '<tr>';
+    s += '<tr data-sort-method="thead">';
     for (const col of columns) {
 	s += `<th><em><font style="font-size: small" color=${col.color}>${col.title[1]}</font></em></th>`;
     }
@@ -179,27 +186,29 @@ function makeTableHeader(fname, gpu) {
 function makeProfileLine(line, prof) {
     let s = '';
     s += '<tr>';
-    s += '<td style="height: 10; vertical-align: middle" align="left">';
+    const total_time = (line.n_cpu_percent_python + line.n_cpu_percent_c + line.n_sys_percent);
+    const total_time_str = String(total_time.toFixed(2)).padStart(10, ' ');
+    s += `<td style="height: 10; width: 100; vertical-align: middle" align="left" data-sort='${total_time_str}'>`;
     s += `<span style="height: 10; width: 100; vertical-align: middle" id="cpu_bar${cpu_bars.length}"></span>`;
     cpu_bars.push(makeBar(line.n_cpu_percent_python, line.n_cpu_percent_c, line.n_sys_percent));
     if (line.n_avg_mb < 1.0) {
-	s += '<td></td>';
+	s += '<td style="width: 100"></td>';
     } else {
-	s += `<td style="height: 10; vertical-align: middle" align="left">`;
+	s += `<td style="height: 10; width: 100; vertical-align: middle" align="left" data-sort='${String(line.n_avg_mb.toFixed(0)).padStart(10, '0')}'>`;
 	s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
 	s += '</td>';
 	memory_bars.push(makeMemoryBar(line.n_avg_mb.toFixed(0), "average memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
     }
     if (line.n_peak_mb < 1.0) {
-	s += '<td></td>';
+	s += '<td style="width: 100"></td>';
 	memory_bars.push(null);
     } else {
-	s += `<td style="height: 10; vertical-align: middle" align="left">`;
+	s += `<td style="height: 10; width: 100; vertical-align: middle" align="left" data-sort='${String(line.n_peak_mb.toFixed(0)).padStart(10, '0')}'>`;
 	s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
 	memory_bars.push(makeMemoryBar(line.n_peak_mb.toFixed(0), "peak memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
 	s += '</td>';
     }
-    s += `<td style='vertical-align: middle'><span style="height:10; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;	    
+    s += `<td style='vertical-align: middle; width: 150'><span style="height:10; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;	    
     if (line.n_usage_fraction >= 0.01) {
 	s += `<font style="font-size: small">${(100 * line.n_usage_fraction).toFixed(0)}%</font>`;
     }
@@ -210,20 +219,20 @@ function makeProfileLine(line, prof) {
 	memory_sparklines.push(null);
     }
     if (line.n_copy_mb_s < 1.0) {
-	s += '<td></td>';
+	s += '<td style="width: 100"></td>';
     } else {
-	s += `<td align="right"><font style="font-size: small" color="${CopyColor}">${line.n_copy_mb_s.toFixed(0)}</font></td>`;
+	s += `<td style="width: 100" align="right"><font style="font-size: small" color="${CopyColor}">${line.n_copy_mb_s.toFixed(0)}</font></td>`;
     }
     if (prof.gpu) {
 	if (line.n_gpu_percent < 1.0) {
-	    s += '<td></td>';
+	    s += '<td style="width: 100"></td>';
 	} else {
-	    s += `<td align="right"><font color="${CopyColor}">${line.n_gpu_percent.toFixed(0)}</font></td>`;
+	    s += `<td style="width: 100" align="right"><font color="${CopyColor}">${line.n_gpu_percent.toFixed(0)}</font></td>`;
 	}
     }
-    s += `<td align="right" style="vertical-align: top"><font color="gray" style="font-size: 70%; vertical-align: middle" >${line.lineno}&nbsp;</font></td>`;
+    s += `<td align="right" style="vertical-align: top; width: 50"><font color="gray" style="font-size: 70%; vertical-align: middle" >${line.lineno}&nbsp;</font></td>`;
     const codeLine = Prism.highlight(line.line, Prism.languages.python, 'python');
-    s += `<td style="height:10" align="left" bgcolor="whitesmoke" style="vertical-align: middle"><pre style="height: 10; display: inline; white-space: pre-wrap; overflow-x: auto; border: 0px; vertical-align: middle"><code class="language-python">${codeLine}</code></pre></td>`;
+    s += `<td style="height:10" align="left" bgcolor="whitesmoke" style="vertical-align: middle" data-sort="${line.lineno}"><pre style="height: 10; display: inline; white-space: pre-wrap; overflow-x: auto; border: 0px; vertical-align: middle"><code class="language-python">${codeLine}</code></pre></td>`;
     s += '</tr>';
     return s;
 }
@@ -248,6 +257,7 @@ function buildAllocationMaps(prof, f) {
 
 async function display(prof) {
     console.log(prof);
+    let tableID = 0;
     let s = "";
     s += `<p class="text-center" style="vertical-align: middle">Memory usage: <span style="height: 10; vertical-align: middle" id="memory_sparkline0"></span> (max: ${prof.max_footprint_mb.toFixed(2)}MB, growth rate: ${prof.growth_rate.toFixed(2)}%)</p>`;
     memory_sparklines.push(makeSparkline(prof.samples, prof.max_footprint_mb));
@@ -256,7 +266,8 @@ async function display(prof) {
     for (const f in prof.files) {
 	s += `<p class="text-center"><code>${f}</code>: % of time = ${prof.files[f].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</p>`
 	s += '<div>';
-	s += '<table class="profile table table-hover table-condensed">';
+	s += `<table class="profile table table-hover table-condensed" id="table-${tableID}">`;
+	tableID++;
 	s += makeTableHeader(f, prof.gpu);
 	s += '<tbody>';
 	// Print per-line profiles.
@@ -265,38 +276,50 @@ async function display(prof) {
 	    const line = prof.files[f].lines[l];
 	    // Add a space whenever we skip a line.
 	    if (line.lineno > prevLineno + 1) {
-		s += '<tr><td style="line-height: 1px" colspan="${columns.length+1}">&nbsp;</td></tr>';
+		s += '<tr>';
+		for (let i = 0; i < columns.length; i++) {
+		    s += '<td></td>';
+		}
+		s += `<td style="line-height: 1px" data-sort="${line.lineno}">&nbsp;</td>`;
+		s += '</tr>';
 	    }
 	    prevLineno = line.lineno;
 	    s += makeProfileLine(line, prof);
 	}
-	// Print out function summaries
+	s += '</tbody>';
+	s += '</table>';
+	// Print out function summaries.
+	s += `<table class="profile table table-hover table-condensed" id="table-${tableID}">`;
+	s += makeTableHeader(f, prof.gpu, true);
+	s += '<tbody>';
+	tableID++;
 	if (prof.files[f].functions) {
-	    s += `<tr><td colspan=${columns.length + 1}><hr></td></tr>`;
-	    s += `<tr><td colspan=${columns.length}></td><td><font style="font-size: small; font-style: italic">functions:</font></td></tr>`;
 	    for (const l in prof.files[f].functions) {
 		const line = prof.files[f].functions[l];
 		s += makeProfileLine(line, prof);
 	    }
 	}
-	s += '</tbody>';
-	s += '</table>';
-	//// Print out memory consumption top N.
-	const topN = 5; // up to this many
-	const topThresholdMb = 1; // at least this many MB to be reported
-	// Build maps of average and peak allocations.
-	let averageMallocs, peakMallocs;
-	[averageMallocs, peakMallocs] = buildAllocationMaps(prof, f);
-	s += '<table class="profile table table-hover table-condensed">';
-	s += memorySummary(averageMallocs, "average", topN, topThresholdMb);
-	s += '<tr><td></td></tr>';
-	s += memorySummary(peakMallocs, "peak", topN, topThresholdMb);
 	s += '</table>';
 	s += '</div>';
+	if (false) {
+	    //// Print out memory consumption top N.
+	    const topN = 5; // up to this many
+	    const topThresholdMb = 1; // at least this many MB to be reported
+	    // Build maps of average and peak allocations.
+	    let averageMallocs, peakMallocs;
+	    [averageMallocs, peakMallocs] = buildAllocationMaps(prof, f);
+	    s += '<table class="profile table table-hover table-condensed">';
+	    s += memorySummary(averageMallocs, "average", topN, topThresholdMb);
+	    s += '<tr><td></td></tr>';
+	    s += memorySummary(peakMallocs, "peak", topN, topThresholdMb);
+	}
     }
     s += '</div>';
     const p = document.getElementById('profile');
     p.innerHTML = s;
+    for (let i = 0; i < tableID; i++) {
+	new Tablesort(document.getElementById(`table-${i}`));
+    }
     memory_sparklines.forEach((p, index) => {
 	if (p) {
 	    (async () => {
@@ -340,15 +363,5 @@ function doSomething(e) {
     let lines = e.target.result;
     const profile = JSON.parse(lines);
     load(profile);
-//    console.log("GOT'EM");
-//    console.log(lines);
 }
 
-function doIt() {
-    // Disabled for now:
-    // addListeners();
-    // Read in the example JSON file.
-//    load(); // example.json");
-}
-
-						 
