@@ -279,7 +279,7 @@ async function display(prof) {
 		for (let i = 0; i < columns.length; i++) {
 		    s += '<td></td>';
 		}
-		s += `<td style="line-height: 1px" data-sort="${line.lineno}">&nbsp;</td>`;
+		s += `<td style="line-height: 1px; background-color: lightgray" data-sort="${line.lineno}">&nbsp;</td>`;
 		s += '</tr>';
 	    }
 	    prevLineno = line.lineno;
