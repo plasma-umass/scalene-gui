@@ -20,12 +20,17 @@
     <script defer src="scalene-gui.js" type="text/javascript"></script>
   </head>
   <body>
-    <a href="https://github.com/plasma-umass/scalene"><p class="text-center"><img src="scalene-image.png" height=100></img></p></a>
+    <a href="https://github.com/plasma-umass/scalene">
+      <p class="text-center">
+	<img src="scalene-image.png" height="100">
+      </p>
+    </a>
     <p />
     <form id="jsonFile" name="jsonFile" enctype="multipart/form-data" method="post">
       <div class="form-group">
 	<div class="d-flex justify-content-center">
-	  <input type='file' id='fileinput' accept='.json' onchange="loadFile();">
+	  <label for='fileinput' style="padding: 5px 5px; border-radius: 5px; border: 1px ridge black; font-size: 0.8rem; height: auto;">Select a profile (.json)</label>
+	  <input style="height: 0; width: 0; opacity:0" type='file' id='fileinput' accept='.json' onchange="loadFile();">
 	</div>
       </div>
     </form>
