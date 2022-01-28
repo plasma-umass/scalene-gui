@@ -6,6 +6,9 @@ function makeBar(python, native, system) {
 		"stroke" : "transparent"
 	    }
 	},
+	"autosize" : {
+	    "contains" : "padding"
+	},
 	"width": "container",
 	"height" : "container",
 	"padding": 0,
@@ -34,7 +37,10 @@ function makeMemoryBar(memory, title, python_percent, total, color) {
 	"config": {
 	    "view": {
 		"stroke" : "transparent"
-	    }
+	    },
+	},
+	"autosize" : {
+	    "contains" : "padding"
 	},
 	"width": "container",
 	"height" : "container",
@@ -112,26 +118,26 @@ function makeTableHeader(fname, gpu, functions = false) {
     } else {
 	tableTitle = "line profile";
     }
-    columns = [{ title : ["time", ""], color: CPUColor, width: 100 },
-	       { title: ["memory", "average"], color: MemoryColor, width: 100 },
-	       { title: ["memory", "peak"], color: MemoryColor, width: 100 },
-	       { title: ["memory", "timeline/%"], color: MemoryColor, width: 150 },
-	       { title: ["copy", "(MB/s)"], color: CopyColor, width: 40 }];
+    columns = [{ title : ["time", ""], color: CPUColor, width: 0 },
+	       { title: ["memory", "average"], color: MemoryColor, width: 0 },
+	       { title: ["memory", "peak"], color: MemoryColor, width: 0 },
+	       { title: ["memory", "timeline/%"], color: MemoryColor, width: 0 },
+	       { title: ["copy", "(MB/s)"], color: CopyColor, width: 0 }];
     if (gpu) {
-	columns.push({ title: ["gpu", ""], color: CopyColor, width: 40 });
+	columns.push({ title: ["gpu", ""], color: CopyColor, width: 0 });
     }
-    columns.push({ title: ["", ""], color: "black", width: 100000 });
+    columns.push({ title: ["", ""], color: "black", width: 100 });
     let s = '';
     s += '<thead class="thead-light">';
     s += '<tr data-sort-method="thead">';
     for (const col of columns) {
-	s += `<th><font style="font-variant: small-caps; text-decoration: underline; width:${col.width}" color=${col.color}>${col.title[0]}</font></th>`;
+	s += `<th style="width:${col.width}"><font style="font-variant: small-caps; text-decoration: underline; width:${col.width}" color=${col.color}>${col.title[0]}</font></th>`;
     }
-    s += `<th><font style="font-variant: small-caps; text-decoration: underline">${tableTitle}</font></th>`;
+    s += `<th style="width:10000"><font style="font-variant: small-caps; text-decoration: underline">${tableTitle}</font></th>`;
     s += '</tr>';
     s += '<tr data-sort-method="thead">';
     for (const col of columns) {
-	s += `<th><em><font style="font-size: small" color=${col.color}>${col.title[1]}</font></em></th>`;
+	s += `<th style="width:${col.width}"><em><font style="font-size: small" color=${col.color}>${col.title[1]}</font></em></th>`;
     }
     s += `<th><code>${fname}</code></th></tr>`;
     s += '</thead>';
@@ -146,23 +152,14 @@ function makeProfileLine(line, prof) {
     s += `<td style="height: 10; width: 100; vertical-align: middle" align="left" data-sort='${total_time_str}'>`;
     s += `<span style="height: 10; width: 100; vertical-align: middle" id="cpu_bar${cpu_bars.length}"></span>`;
     cpu_bars.push(makeBar(line.n_cpu_percent_python, line.n_cpu_percent_c, line.n_sys_percent));
-    if (line.n_avg_mb < 1.0) {
-	s += '<td style="width: 100"></td>';
-    } else {
-	s += `<td style="height: 10; width: 100; vertical-align: middle" align="left" data-sort='${String(line.n_avg_mb.toFixed(0)).padStart(10, '0')}'>`;
-	s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
-	s += '</td>';
-	memory_bars.push(makeMemoryBar(line.n_avg_mb.toFixed(0), "average memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
-    }
-    if (line.n_peak_mb < 1.0) {
-	s += '<td style="width: 100"></td>';
-	memory_bars.push(null);
-    } else {
-	s += `<td style="height: 10; width: 100; vertical-align: middle" align="left" data-sort='${String(line.n_peak_mb.toFixed(0)).padStart(10, '0')}'>`;
-	s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
-	memory_bars.push(makeMemoryBar(line.n_peak_mb.toFixed(0), "peak memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
-	s += '</td>';
-    }
+    s += `<td style="height: 10; width: 100; vertical-align: middle" align="left" data-sort='${String(line.n_avg_mb.toFixed(0)).padStart(10, '0')}'>`;
+    s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
+    s += '</td>';
+    memory_bars.push(makeMemoryBar(line.n_avg_mb.toFixed(0), "average memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
+    s += `<td style="height: 10; width: 100; vertical-align: middle" align="left" data-sort='${String(line.n_peak_mb.toFixed(0)).padStart(10, '0')}'>`;
+    s += `<span style="height: 10; width: 100; vertical-align: middle" id="memory_bar${memory_bars.length}"></span>`;
+    memory_bars.push(makeMemoryBar(line.n_peak_mb.toFixed(0), "peak memory", parseFloat(line.n_python_fraction), prof.max_footprint_mb.toFixed(2), "darkgreen"));
+    s += '</td>';
     s += `<td style='vertical-align: middle; width: 150'><span style="height:10; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;	    
     if (line.n_usage_fraction >= 0.01) {
 	s += `<font style="font-size: small">${(100 * line.n_usage_fraction).toFixed(0)}%</font>`;
