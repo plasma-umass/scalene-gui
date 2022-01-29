@@ -374,3 +374,8 @@ function loadDemo() {
     load(example_profile);
 }
 
+document.getElementById('demo-text').addEventListener('click', (e) =>
+    {
+	loadDemo();
+	e.preventDefault();
+    });
