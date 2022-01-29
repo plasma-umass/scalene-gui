@@ -130,9 +130,15 @@ function makeTableHeader(fname, gpu, functions = false) {
     s += '<thead class="thead-light">';
     s += '<tr data-sort-method="thead">';
     for (const col of columns) {
-	s += `<th style="width:${col.width}"><font style="font-variant: small-caps; text-decoration: underline; width:${col.width}" color=${col.color}>${col.title[0]}</font>&nbsp;&nbsp;</th>`;
+	s += `<th class="F${fname}-nonline" style="width:${col.width}"><font style="font-variant: small-caps; text-decoration: underline; width:${col.width}" color=${col.color}>${col.title[0]}</font>&nbsp;&nbsp;</th>`;
     }
-    s += `<th style="width:10000"><font style="font-variant: small-caps; text-decoration: underline">${tableTitle}</font></th>`;
+    let id;
+    if (functions) {
+	id = 'functionProfile';
+    } else {
+	id = 'lineProfile';
+    }
+    s += `<th id=${fname + "-" + id} style="width:10000"><font style="font-variant: small-caps; text-decoration: underline">${tableTitle}</font></th>`;
     s += '</tr>';
     s += '<tr data-sort-method="thead">';
     for (const col of columns) {
@@ -293,7 +299,7 @@ async function display(prof) {
 		for (let i = 0; i < columns.length; i++) {
 		    s += '<td></td>';
 		}
-		s += `<td style="line-height: 1px; background-color: lightgray" data-sort="${line.lineno}">&nbsp;</td>`;
+		s += `<td class="F${ff[0]}-blankline" style="line-height: 1px; background-color: lightgray" data-sort="${line.lineno}">&nbsp;</td>`;
 		s += '</tr>';
 	    }
 	    prevLineno = line.lineno;
@@ -323,6 +329,39 @@ async function display(prof) {
     s += '</div>';
     const p = document.getElementById('profile');
     p.innerHTML = s;
+
+    // Logic for turning on and off the gray line separators.
+
+    // If you click on any header to sort (except line profiles), turn gray lines off.
+    for (const ff of files) {
+	const allHeaders = document.getElementsByClassName(`F${ff[0]}-nonline`);
+	for (let i = 0; i < allHeaders.length; i++) {
+	    allHeaders[i].addEventListener(
+		'click',
+		(e) => {
+		    const all = document.getElementsByClassName(`F${ff[0]}-blankline`);
+		    for (let i = 0; i < all.length; i++) {
+			all[i].style.display = 'none';
+		    }
+		});
+	}
+    }
+    
+    // If you click on the line profile header, and gray lines are off, turn them back on.
+    for (const ff of files) {
+	document.getElementById(`${ff[0]}-lineProfile`).addEventListener(
+	    'click',
+	    (e) => {
+		const all = document.getElementsByClassName(`F${ff[0]}-blankline`);
+		for (let i = 0; i < all.length; i++) {
+		    if (all[i].style.display === 'none') {
+			all[i].style.display = 'block';
+		    }
+		}
+	    });
+    }
+
+
     for (let i = 0; i < tableID; i++) {
 	new Tablesort(document.getElementById(`table-${i}`), { "descending" : true });
     }
