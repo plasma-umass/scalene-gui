@@ -63,9 +63,10 @@ function makeMemoryBar(memory, title, python_percent, total, color) {
 }
 
 
-function makeSparkline(samples, maximum, height = 10, width = 75) {
+function makeSparkline(samples, max_x, max_y, height = 10, width = 75) {
+    console.log(samples);
     const values = samples.map((v, i) => {
-	return {"x": i, "y": v, "c": 0};
+	return {"x": v[0], "y": v[1], "c": 0};
     });
     const strokeWidth = 1; // 0.25;
     return {
@@ -86,11 +87,12 @@ function makeSparkline(samples, maximum, height = 10, width = 75) {
 	"encoding" : {
 	    "x" : {"field": "x",
 		   "type" : "temporal",
-		   "axis" : false},
+		   "axis" : false,
+		   "scale" : { "domain" : [0, max_x] }},
 	    "y" : {"field": "y",
 		   "type" : "quantitative",
 		   "axis" : false,
-		   "scale" : { "domain" : [0, maximum] }},
+		   "scale" : { "domain" : [0, max_y] }},
 	    "color" : {
 		"field" : "c",
 		"type" : "nominal",
@@ -161,7 +163,7 @@ function makeProfileLine(line, prof, cpu_bars, memory_bars, memory_sparklines) {
     s += `<td style='vertical-align: middle; width: 100'><span style="height:10; width: 100; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;	    
     s += '</td>';
     if (line.memory_samples.length > 0) {
-	memory_sparklines.push(makeSparkline(line.memory_samples, prof.max_footprint_mb));
+	memory_sparklines.push(makeSparkline(line.memory_samples, prof.elapsed_time_sec * 1e9, prof.max_footprint_mb));
     } else {
 	memory_sparklines.push(null);
     }
@@ -231,7 +233,7 @@ async function display(prof) {
     s += '<td height="10"><span style="height: 15; width: 150; vertical-align: middle" id="memory_bar0"></span></td>';
     s += '<td></td>';
     s += '<td align="left"><span style="vertical-align: top" height: 15; id="memory_sparkline0"></span></td>';
-    memory_sparklines.push(makeSparkline(prof.samples, prof.max_footprint_mb, 15, 200));
+    memory_sparklines.push(makeSparkline(prof.samples, prof.elapsed_time_sec * 1e9, prof.max_footprint_mb, 15, 200));
     s += '</tr>';
     
     // Compute overall usage.
