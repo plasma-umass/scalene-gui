@@ -119,7 +119,7 @@ function makeTableHeader(fname, gpu, functions = false) {
 	       { title: ["memory", "average"], color: MemoryColor, width: 0 },
 	       { title: ["memory", "peak"], color: MemoryColor, width: 0 },
 	       { title: ["memory", "timeline"], color: MemoryColor, width: 0 },
-	       { title: ["memory", "percent"], color: MemoryColor, width: 0 },
+	       { title: ["memory", "activity"], color: MemoryColor, width: 0 },
 	       { title: ["copy", "(MB/s)"], color: CopyColor, width: 0 }];
     if (gpu) {
 	columns.push({ title: ["gpu", ""], color: CopyColor, width: 0 });
