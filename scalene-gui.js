@@ -146,7 +146,7 @@ function makeProfileLine(line, prof, cpu_bars, memory_bars, memory_sparklines) {
     let s = '';
     s += '<tr>';
     const total_time = (line.n_cpu_percent_python + line.n_cpu_percent_c + line.n_sys_percent);
-    const total_time_str = String(total_time.toFixed(2)).padStart(10, ' ');
+    const total_time_str = String(total_time.toFixed(1)).padStart(10, ' ');
     s += `<td style="height: 10; width: 100; vertical-align: middle" align="left" data-sort='${total_time_str}'>`;
     s += `<span style="height: 10; width: 100; vertical-align: middle" id="cpu_bar${cpu_bars.length}"></span>`;
     cpu_bars.push(makeBar(line.n_cpu_percent_python, line.n_cpu_percent_c, line.n_sys_percent));
@@ -276,7 +276,7 @@ async function display(prof) {
     // Print profile for each file
     let fileIteration = 0;
     for (const ff of files) {
-	s += `<p class="text-left"><font style="font-size: 90%"><code>${ff[0]}</code>: % of time = ${ff[1].percent_cpu_time.toFixed(2)}% out of ${prof.elapsed_time_sec.toFixed(2)}s.</font></p>`
+	s += `<p class="text-left"><font style="font-size: 90%"><code>${ff[0]}</code>: % of time = ${ff[1].percent_cpu_time.toFixed(1)}% out of ${prof.elapsed_time_sec.toFixed(1)}s.</font></p>`
 	s += '<div>';
 	s += `<table class="profile table table-hover table-condensed" id="table-${tableID}">`;
 	tableID++;
