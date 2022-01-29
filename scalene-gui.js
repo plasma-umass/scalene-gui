@@ -64,7 +64,6 @@ function makeMemoryBar(memory, title, python_percent, total, color) {
 
 
 function makeSparkline(samples, max_x, max_y, height = 10, width = 75) {
-    console.log(samples);
     const values = samples.map((v, i) => {
 	return {"x": v[0], "y": v[1], "c": 0};
     });
