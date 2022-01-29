@@ -1,4 +1,4 @@
-{
+const example_profile = {
     "elapsed_time_sec": 12.696948051452637,
     "files": {
         "./test/testme.py": {
