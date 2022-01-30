@@ -368,7 +368,7 @@ async function display(prof) {
     memory_sparklines.forEach((p, index) => {
 	if (p) {
 	    (async () => {
-		await vegaEmbed(`#memory_sparkline${index}`, p, {"actions" : false });
+		await vegaEmbed(`#memory_sparkline${index}`, p, {"actions" : false, "renderer": "svg" });
 	    })();
 	}
     });
