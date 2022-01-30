@@ -22,7 +22,7 @@ function makeBar(python, native, system) {
 	    "x": {"aggregate": "sum", "field": "y", "axis": false,
 		  "scale" : { "domain" : [0, 100] } },
 	    "color": {"field": "c", "type": "nominal", "legend" : false,
-		      "scale": { "range": ["darkblue", "lightblue", "blue"] } },
+		      "scale": { "range": ["darkblue", "#6495ED", "blue"] } },
 	    "tooltip" : [
 		{ "field" : "c", "type" : "nominal", "title" : "time" }
 	    ]
@@ -54,7 +54,7 @@ function makeMemoryBar(memory, title, python_percent, total, color) {
 	    "x": {"aggregate": "sum", "field": "y", "axis": false,
 		  "scale" : { "domain" : [0, total] } },
 	    "color": {"field": "c", "type": "nominal", "legend" : false,
-		      "scale": { "range": [color, "lightgreen", "green"] } },
+		      "scale": { "range": [color, "#50C878", "green"] } },
 	    "tooltip" : [
 		{ "field" : "c", "type" : "nominal", "title" : title }
 	    ]
@@ -224,9 +224,9 @@ async function display(prof) {
     s += '<div class="col-auto">';
     s += '<table width="50%" class="table text-center table-condensed">';
     s += '<tr>';
-    s += `<td><font style="font-size: small"><b>Time:</b> <font color="darkblue">Python</font> | <font color="lightblue">native</font> | <font color="blue">system</font><br /></font></td>`;
+    s += `<td><font style="font-size: small"><b>Time:</b> <font color="darkblue">Python</font> | <font color="#6495ED">native</font> | <font color="blue">system</font><br /></font></td>`;
     s += '<td width="10"></td>';
-    s += `<td><font style="font-size: small"><b>Memory:</b> <font color="darkgreen">Python</font> | <font color="lightgreen">native</font><br /></font></td>`;
+    s += `<td><font style="font-size: small"><b>Memory:</b> <font color="darkgreen">Python</font> | <font color="#50C878">native</font><br /></font></td>`;
     s += '<td width="10"></td>';
     s += '<td valign="middle" style="vertical-align: middle">';
     s += `<font style="font-size: small"><b>Memory timeline: </b>(max: ${prof.max_footprint_mb.toFixed(1)}MB, growth: ${prof.growth_rate.toFixed(1)}%)</font>`;
