@@ -82,10 +82,10 @@ function makeSparkline(samples, max_x, max_y, height = 10, width = 75) {
 	"data": {
 	    "values": values
 	},
-	"mark" : { "type" : "line", "strokeWidth": strokeWidth },
+	"mark" : { "type" : "line", "strokeWidth": strokeWidth, "interpolate" : "step-after" },
 	"encoding" : {
 	    "x" : {"field": "x",
-		   "type" : "temporal",
+		   "type" : "quantitative",
 		   "axis" : false,
 		   "scale" : { "domain" : [0, max_x] }},
 	    "y" : {"field": "y",
@@ -237,7 +237,7 @@ async function display(prof) {
     s += '<td></td>';
     s += '<td height="10"><span style="height: 15; width: 150; vertical-align: middle" id="memory_bar0"></span></td>';
     s += '<td></td>';
-    s += '<td align="left"><span style="vertical-align: top" height: 15; id="memory_sparkline0"></span></td>';
+    s += '<td align="left"><span style="vertical-align: top" id="memory_sparkline0"></span></td>';
     memory_sparklines.push(makeSparkline(prof.samples, prof.elapsed_time_sec * 1e9, prof.max_footprint_mb, 15, 200));
     s += '</tr>';
     
