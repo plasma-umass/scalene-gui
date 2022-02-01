@@ -396,6 +396,14 @@ function load(profile) {
     })();
 }
 
+function loadFetch() {
+    (async () => {
+	let resp = await fetch('profile.json');
+	let profile = await resp.json();
+	load(profile);
+    })();
+}
+
 function loadFile() {
     const input = document.getElementById('fileinput');
     const file = input.files[0];
