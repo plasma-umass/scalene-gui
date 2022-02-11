@@ -1,5 +1,6 @@
 {
     "elapsed_time_sec": 34.71055603027344,
+    "program" : "demo",
     "files": {
         "./test/testtf.py": {
             "functions": [
