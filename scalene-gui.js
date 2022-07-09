@@ -18,35 +18,61 @@ function makeBar(python, native, system) {
           x: 0,
           y: python.toFixed(1),
           c: "(Python) " + python.toFixed(1) + "%",
+          d: python.toFixed(0) + "%",
         },
         {
           x: 0,
           y: native.toFixed(1),
           c: "(native) " + native.toFixed(1) + "%",
+          d: native.toFixed(0) + "%",
         },
         {
           x: 0,
           y: system.toFixed(1),
           c: "(system) " + system.toFixed(1) + "%",
+          d: system.toFixed(0) + "%",
         },
       ],
     },
-    mark: { type: "bar" },
-    encoding: {
-      x: {
-        aggregate: "sum",
-        field: "y",
-        axis: false,
-        scale: { domain: [0, 100] },
+    layer: [
+      {
+        mark: { type: "bar" },
+        encoding: {
+          x: {
+            aggregate: "sum",
+            field: "y",
+            axis: false,
+            scale: { domain: [0, 100] },
+          },
+          color: {
+            field: "c",
+            type: "nominal",
+            legend: false,
+            scale: { range: ["darkblue", "#6495ED", "blue"] },
+          },
+          tooltip: [{ field: "c", type: "nominal", title: "time" }],
+        },
       },
-      color: {
-        field: "c",
-        type: "nominal",
-        legend: false,
-        scale: { range: ["darkblue", "#6495ED", "blue"] },
-      },
-      tooltip: [{ field: "c", type: "nominal", title: "time" }],
-    },
+      /*	  ,
+      {
+          mark: {
+              type: "text",
+              opacity: 1.0,
+              color: "white",
+              align: "right",
+              limit: 50,
+          },
+          encoding: {
+              x: { type: "quantitative", field: "y" },
+              text: {
+		  field: "d",
+		  bandPosition: 0.5,
+		  condition: { test: `datum['y'] < 20`, value: "" },
+              },
+          },
+	  },
+	  */
+    ],
   };
 }
 
@@ -71,25 +97,60 @@ function makeGPUPie(util) {
           value: util.toFixed(1),
           c: "in use: " + util.toFixed(1) + "%",
         },
+      ],
+    },
+    mark: "arc",
+    encoding: {
+      theta: {
+        field: "value",
+        type: "quantitative",
+        scale: { domain: [0, 100] },
+      },
+      color: {
+        field: "c",
+        type: "nominal",
+        legend: false,
+        scale: { range: ["goldenrod", "#f4e6c2"] },
+      },
+      tooltip: [{ field: "c", type: "nominal", title: "GPU" }],
+    },
+  };
+}
+
+function makeMemoryPie(native_mem, python_mem) {
+  return {
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    width: "container",
+    height: "container",
+    padding: 0,
+    data: {
+      values: [
+        {
+          category: 1,
+          value: native_mem.toFixed(1),
+          c: "native: " + native_mem.toFixed(1) + "%",
+        },
         {
           category: 2,
-          value: 100 - util.toFixed(1),
-          c: "idle: " + (100 - util).toFixed(1) + "%",
+          value: python_mem.toFixed(1),
+          c: "Python: " + python_mem.toFixed(1) + "%",
         },
       ],
     },
     mark: "arc",
     encoding: {
-      //"x": {"aggregate": "sum", "field": "y", "axis": false,
-      //	  "scale" : { "domain" : [0, 100] } },
-      theta: { field: "value", type: "quantitative" },
+      theta: {
+        field: "value",
+        type: "quantitative",
+        scale: { domain: [0, 100] },
+      },
       color: {
         field: "c",
         type: "nominal",
         legend: false,
-        scale: { range: ["#f4e6c2", "goldenrod"] },
+        scale: { range: ["darkgreen", "#50C878"] },
       },
-      tooltip: [{ field: "c", type: "nominal", title: "GPU" }],
+      tooltip: [{ field: "c", type: "nominal", title: "memory" }],
     },
   };
 }
@@ -141,23 +202,48 @@ function makeMemoryBar(memory, title, python_percent, total, color) {
   };
 }
 
-function makeSparkline(samples, max_x, max_y, height = 20, width = 75) {
+function makeSparkline(
+  samples,
+  max_x,
+  max_y,
+  leak_velocity = 0,
+  height = 20,
+  width = 75
+) {
   const values = samples.map((v, i) => {
-      return { x: v[0], y: v[1], y_text: v[1].toFixed(1)+"MB" };
+    let leak_str = "";
+    if (leak_velocity != 0) {
+      leak_str = `; possible leak (${leak_velocity.toFixed(1)} MB/s)`;
+    }
+    return {
+      x: v[0],
+      y: v[1],
+      y_text:
+        v[1].toFixed(1) + "MB (@ " + (v[0] / 1e9).toFixed(0) + "s)" + leak_str,
+    };
   });
+  let leak_info = "";
+  if (leak_velocity != 0) {
+    leak_info = "possible leak";
+    height -= 10; // FIXME should be actual height of font
+  }
+
   const strokeWidth = 1; // 0.25;
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    // "description": "Memory consumption over time.",
-    //"config": {
-    //    "view": {
-    //		"stroke" : "transparent"
-    //	    }
-    //	},
     data: { values: values },
     width: width,
     height: height,
     padding: 0,
+    title: {
+      text: leak_info,
+      baseline: "line-bottom",
+      color: "red",
+      offset: 0,
+      lineHeight: 10,
+      orient: "bottom",
+      fontStyle: "italic",
+    },
     encoding: {
       x: {
         field: "x",
@@ -193,6 +279,7 @@ function makeSparkline(samples, max_x, max_y, height = 20, width = 75) {
             },
           },
         },
+
         layer: [
           { mark: "line" },
           {
@@ -201,8 +288,8 @@ function makeSparkline(samples, max_x, max_y, height = 20, width = 75) {
           },
         ],
       },
+
       {
-        // "transform": [{"pivot": "x", "value": "x", "groupby": ["x"]}],
         mark: "rule",
         encoding: {
           opacity: {
@@ -253,13 +340,13 @@ function makeTableHeader(fname, gpu, memory, functions = false) {
         title: ["memory", "average"],
         color: MemoryColor,
         width: 0,
-        info: "Average amount of memory allocated by this line / function",
+        info: "Average amount of memory allocated by line / function",
       },
       {
         title: ["memory", "peak"],
         color: MemoryColor,
         width: 0,
-        info: "Peak amount of memory allocated by this line / function",
+        info: "Peak amount of memory allocated by line / function",
       },
       {
         title: ["memory", "timeline"],
@@ -271,7 +358,7 @@ function makeTableHeader(fname, gpu, memory, functions = false) {
         title: ["memory", "activity"],
         color: MemoryColor,
         width: 0,
-        info: "% of bytes allocated by this line / function over the total bytes allocated in that file",
+        info: "% of bytes allocated by line / function over total bytes allocated in file",
       },
       {
         title: ["copy", "(MB/s)"],
@@ -286,13 +373,13 @@ function makeTableHeader(fname, gpu, memory, functions = false) {
       title: ["gpu", "util."],
       color: CopyColor,
       width: 0,
-      info: "% utilization of the GPU by this line / function (may be inaccurate if GPU is not dedicated)",
+      info: "% utilization of the GPU by line / function (may be inaccurate if GPU is not dedicated)",
     });
     columns.push({
       title: ["gpu", "memory"],
       color: CopyColor,
       width: 0,
-      info: "Peak GPU memory allocated by this line / function (may be inaccurate if GPU is not dedicated)",
+      info: "Peak GPU memory allocated by line / function (may be inaccurate if GPU is not dedicated)",
     });
   }
   columns.push({ title: ["", ""], color: "black", width: 100 });
@@ -329,10 +416,12 @@ function makeTableHeader(fname, gpu, memory, functions = false) {
 
 function makeProfileLine(
   line,
+  filename,
   prof,
   cpu_bars,
   memory_bars,
   memory_sparklines,
+  memory_activity,
   gpu_pies
 ) {
   let s = "";
@@ -377,22 +466,41 @@ function makeProfileLine(
     s += `<td style='vertical-align: middle; width: 100'><span style="height:25; width: 100; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;
     s += "</td>";
     if (line.memory_samples.length > 0) {
+      let leak_velocity = 0;
+      if ("leaks" in prof.files[filename]) {
+        if (line.lineno in prof.files[filename].leaks) {
+          leak_velocity = prof.files[filename].leaks[line.lineno].velocity_mb_s;
+        }
+      }
       memory_sparklines.push(
         makeSparkline(
           line.memory_samples,
           prof.elapsed_time_sec * 1e9,
-          prof.max_footprint_mb
+          prof.max_footprint_mb,
+          leak_velocity
         )
       );
     } else {
       memory_sparklines.push(null);
     }
-    s += '<td style="width: 100; vertical-align: middle" align="right">';
+    s += '<td style="width: 100; vertical-align: middle" align="center">';
     if (line.n_usage_fraction >= 0.01) {
-      s += `<font style="font-size: small">${String(
-        (100 * line.n_usage_fraction).toFixed(0)
-      ).padStart(10, " ")}%&nbsp;&nbsp;&nbsp;</font>`;
+      s += `<span style="height: 20; width: 30; vertical-align: middle" id="memory_activity${memory_activity.length}"></span>`;
+      console.log(line.lineno, line.n_usage_fraction, line.n_python_fraction);
+      memory_activity.push(
+        makeMemoryPie(
+          100 *
+            line.n_usage_fraction *
+            (1 - parseFloat(line.n_python_fraction)),
+          100 * line.n_usage_fraction * parseFloat(line.n_python_fraction)
+        )
+      );
+    } else {
+      memory_activity.push(null);
     }
+    //      s += `<font style="font-size: small">${String(
+    //        (100 * line.n_usage_fraction).toFixed(0)
+    //      ).padStart(10, " ")}%&nbsp;&nbsp;&nbsp;</font>`;
     s += "</td>";
     if (line.n_copy_mb_s < 1.0) {
       s += '<td style="width: 100"></td>';
@@ -449,6 +557,7 @@ function buildAllocationMaps(prof, f) {
 
 async function display(prof) {
   let memory_sparklines = [];
+  let memory_activity = [];
   let cpu_bars = [];
   let gpu_pies = [];
   let memory_bars = [];
@@ -485,6 +594,7 @@ async function display(prof) {
         prof.samples,
         prof.elapsed_time_sec * 1e9,
         prof.max_footprint_mb,
+        0,
         20,
         200
       )
@@ -578,10 +688,12 @@ async function display(prof) {
       prevLineno = line.lineno;
       s += makeProfileLine(
         line,
+        ff[0],
         prof,
         cpu_bars,
         memory_bars,
         memory_sparklines,
+        memory_activity,
         gpu_pies
       );
     }
@@ -597,10 +709,12 @@ async function display(prof) {
         const line = prof.files[ff[0]].functions[l];
         s += makeProfileLine(
           line,
+          ff[0],
           prof,
           cpu_bars,
           memory_bars,
           memory_sparklines,
+          memory_activity,
           gpu_pies
         );
       }
@@ -670,6 +784,13 @@ async function display(prof) {
     if (p) {
       (async () => {
         await vegaEmbed(`#gpu_pie${index}`, p, { actions: false });
+      })();
+    }
+  });
+  memory_activity.forEach((p, index) => {
+    if (p) {
+      (async () => {
+        await vegaEmbed(`#memory_activity${index}`, p, { actions: false });
       })();
     }
   });
