@@ -1,3 +1,37 @@
+const RightTriangle = '&#9658';   // right-facing triangle symbol (collapsed view)
+const DownTriangle = '&#9660';   // downward-facing triangle symbol (expanded view)
+
+function memory_consumed_str(size_in_mb) {
+  // Return a string corresponding to amount of memory consumed.
+  let gigabytes = Math.floor(size_in_mb / 1024);
+  let terabytes = Math.floor(gigabytes / 1024);
+  if (terabytes > 0) {
+    return `${(size_in_mb / 1048576).toFixed(3)} TB`;
+  } else if (gigabytes > 0) {
+    return `${(size_in_mb / 1024).toFixed(3)} GB`;
+  } else {
+    return `${size_in_mb.toFixed(3)} MB`;
+  }
+}
+
+function time_consumed_str(time_in_ms) {
+  let hours = Math.floor(time_in_ms / 3600000);
+  let minutes = Math.floor((time_in_ms % 3600000) / 60000);
+  let seconds = Math.floor((time_in_ms % 60000) / 1000);
+  let hours_exact = time_in_ms / 3600000;
+  let minutes_exact = (time_in_ms % 3600000) / 60000;
+  let seconds_exact = (time_in_ms % 60000) / 1000;
+  if (hours > 0) {
+    return `${hours_exact.toFixed(0)}h:${minutes_exact.toFixed(0)}m:${seconds_exact.toFixed(3)}s`;
+  } else if (minutes > 0) {
+    return `${minutes_exact.toFixed(0)}m:${seconds_exact.toFixed(3)}s`;
+  } else if (seconds > 0) {
+    return `${seconds_exact.toFixed(3)}s`;
+  } else {
+    return `${time_in_ms.toFixed(3)}ms`;
+  }
+}
+
 function makeBar(python, native, system) {
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
@@ -174,12 +208,12 @@ function makeMemoryBar(memory, title, python_percent, total, color) {
         {
           x: 0,
           y: python_percent * memory,
-          c: "(Python) " + (python_percent * memory).toFixed(1) + "MB",
+          c: "(Python) " + memory_consumed_str(python_percent * memory),
         },
         {
           x: 0,
           y: (1.0 - python_percent) * memory,
-          c: "(native) " + ((1.0 - python_percent) * memory).toFixed(1) + "MB",
+          c: "(native) " + memory_consumed_str((1.0 - python_percent) * memory),
         },
       ],
     },
@@ -213,13 +247,13 @@ function makeSparkline(
   const values = samples.map((v, i) => {
     let leak_str = "";
     if (leak_velocity != 0) {
-      leak_str = `; possible leak (${leak_velocity.toFixed(1)} MB/s)`;
+	leak_str = `; possible leak (${memory_consumed_str(leak_velocity)}/s)`;
     }
     return {
       x: v[0],
       y: v[1],
       y_text:
-        v[1].toFixed(1) + "MB (@ " + (v[0] / 1e9).toFixed(0) + "s)" + leak_str,
+        memory_consumed_str(v[1]) + " (@ " + time_consumed_str(v[0] / 1e6) + ")" + leak_str,
     };
   });
   let leak_info = "";
@@ -361,10 +395,10 @@ function makeTableHeader(fname, gpu, memory, functions = false) {
         info: "% of bytes allocated by line / function over total bytes allocated in file",
       },
       {
-        title: ["copy", "(MB/s)"],
+        title: ["copy", ""],
         color: CopyColor,
         width: 0,
-        info: "Rate of copying memory, in megabytes per second",
+        info: "Rate of copying memory",
       },
     ]);
   }
@@ -555,6 +589,44 @@ function buildAllocationMaps(prof, f) {
   return [averageMallocs, peakMallocs];
 }
 
+// Track all profile ids so we can collapse and expand them en masse.
+let allIDs = [];
+
+function collapseAll() {
+    for (const id of allIds) {
+	collapseDisplay(id);
+    }
+}
+
+function expandAll() {
+    for (const id of allIds) {
+	expandDisplay(id);
+    }
+}
+
+function collapseDisplay(id) {
+    const d = document.getElementById(`profile-${id}`);
+    d.style.display = 'none';
+    document.getElementById(`button-${id}`).innerHTML = RightTriangle;
+}
+
+function expandDisplay(id) {
+    const d = document.getElementById(`profile-${id}`);
+    d.style.display = 'block';
+    document.getElementById(`button-${id}`).innerHTML = DownTriangle;
+}
+
+function toggleDisplay(id) {
+    const d = document.getElementById(`profile-${id}`);
+    if (d.style.display == 'block') {
+	d.style.display = 'none';
+	document.getElementById(`button-${id}`).innerHTML = RightTriangle;
+    } else {
+	d.style.display = 'block';
+	document.getElementById(`button-${id}`).innerHTML = DownTriangle;
+    }
+}
+
 async function display(prof) {
   let memory_sparklines = [];
   let memory_activity = [];
@@ -563,8 +635,8 @@ async function display(prof) {
   let memory_bars = [];
   let tableID = 0;
   let s = "";
-  s += '<div class="row justify-content-center">';
-  s += '<div class="col-auto">';
+  s += '<span class="row justify-content-center">';
+  s += '<span class="col-auto">';
   s += '<table width="50%" class="table text-center table-condensed">';
   s += "<tr>";
   s += `<td><font style="font-size: small"><b>Time:</b> <font color="darkblue">Python</font> | <font color="#6495ED">native</font> | <font color="blue">system</font><br /></font></td>`;
@@ -573,9 +645,7 @@ async function display(prof) {
     s += `<td><font style="font-size: small"><b>Memory:</b> <font color="darkgreen">Python</font> | <font color="#50C878">native</font><br /></font></td>`;
     s += '<td width="10"></td>';
     s += '<td valign="middle" style="vertical-align: middle">';
-    s += `<font style="font-size: small"><b>Memory timeline: </b>(max: ${prof.max_footprint_mb.toFixed(
-      1
-    )}MB, growth: ${prof.growth_rate.toFixed(1)}%)</font>`;
+      s += `<font style="font-size: small"><b>Memory timeline: </b>(max: ${memory_consumed_str(prof.max_footprint_mb)}, growth: ${prof.growth_rate.toFixed(1)}%)</font>`;
     s += "</td>";
   }
   s += "</tr>";
@@ -641,29 +711,46 @@ async function display(prof) {
   }
 
   s += '<tr><td colspan="10">';
-  s += `<p class="text-center"><font style="font-size: 90%; font-style: italic; font-color: darkgray">hover over bars to see breakdowns; click on <font style="font-variant:small-caps; text-decoration:underline">column headers</font> to sort.</font></p>`;
+  s += `<span class="text-center"><font style="font-size: 90%; font-style: italic; font-color: darkgray">hover over bars to see breakdowns; click on <font style="font-variant:small-caps; text-decoration:underline">column headers</font> to sort.</font></span>`;
   s += "</td></tr>";
   s += "</table>";
-  s += "</div>";
-  s += "</div>";
+  s += "</span>";
+  s += "</span>";
 
+    s += '<br class="text-left"><span style="font-size: 80%; color: blue; cursor : pointer;" onClick="expandAll()">&nbsp;show all</span> | <span style="font-size: 80%; color: blue; cursor : pointer;" onClick="collapseAll()">hide all</span></br>';
   s += '<div class="container-fluid">';
 
   // Convert files to an array and sort it in descending order by percent of CPU time.
-  files = Object.entries(prof.files);
+  let files = Object.entries(prof.files);
   files.sort((x, y) => {
     return y[1].percent_cpu_time - x[1].percent_cpu_time;
   });
 
   // Print profile for each file
-  let fileIteration = 0;
-  for (const ff of files) {
-    s += `<p class="text-left"><font style="font-size: 90%"><code>${
+    let fileIteration = 0;
+    allIds = [];
+    for (const ff of files) {
+	allIds.push(ff[0]);
+      s += '<p class="text-left">';
+      s += `<span id="button-${ff[0]}" title="Click to show or hide profile." style="cursor: pointer; color: blue" onClick="toggleDisplay('${ff[0]}')">`;
+      // Always have the first file's profile opened.
+      if (fileIteration == 0) {
+	  s += `${DownTriangle}`;
+      } else {
+	  s += `${RightTriangle}`;
+      }
+      s += '</span>';
+      s += `<font style="font-size: 90%"><code>${
       ff[0]
     }</code>: % of time = ${ff[1].percent_cpu_time.toFixed(
       1
-    )}% out of ${prof.elapsed_time_sec.toFixed(1)}s.</font></p>`;
-    s += "<div>";
+    )}% (${time_consumed_str(ff[1].percent_cpu_time / 100.0 * prof.elapsed_time_sec * 1e3)}) out of ${time_consumed_str(prof.elapsed_time_sec * 1e3)}.</font></p>`;
+      // Always have the first file's profile opened.
+      if (fileIteration == 0) {
+	  s += `<div style="display:block;" id="profile-${ff[0]}">`;
+      } else {
+	  s += `<div style="display:none;" id="profile-${ff[0]}">`;
+      }
     s += `<table class="profile table table-hover table-condensed" id="table-${tableID}">`;
     tableID++;
     s += makeTableHeader(ff[0], prof.gpu, prof.memory, false);
@@ -724,7 +811,7 @@ async function display(prof) {
     fileIteration++;
     // Insert empty lines between files.
     if (fileIteration < files.length) {
-      s += "<p />&nbsp;<hr><p />&nbsp;<p />";
+      s += "<hr>";
     }
   }
   s += "</div>";
