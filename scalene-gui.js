@@ -1,3 +1,17 @@
+function vsNavigate(filename, lineno) {
+    // If we are in VS Code, clicking on a line number in Scalene's web UI will navigate to that line in the source code.
+    try {
+	const vscode = acquireVsCodeApi();
+        vscode.postMessage({
+            command: 'jumpToLine',
+            filePath: filename,
+            lineNumber: lineno
+        });
+    } catch {
+    }
+    
+}
+
 const RightTriangle = "&#9658"; // right-facing triangle symbol (collapsed view)
 const DownTriangle = "&#9660"; // downward-facing triangle symbol (expanded view)
 const Lightning = "&#9889;"; // lightning bolt (for optimizing a line)
@@ -14,19 +28,28 @@ function unescapeUnicode(s) {
   });
 }
 
-async function isValidApiKey(apiKey) {
+async function tryApi(apiKey) {
   const response = await fetch("https://api.openai.com/v1/completions", {
     method: "GET",
     headers: {
+	  "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
-    },
+    }
   });
-  const data = await response.json();
-  if (data.error && data.error.code === "invalid_api_key") {
-    return false;
-  } else {
-    return true;
-  }
+    return response;
+}
+
+async function isValidApiKey(apiKey) {
+    const response = await tryApi(apiKey);
+    const data = await response.json();
+    if (data.error && (data.error.code in { "invalid_api_key" : true,
+					    "invalid_request_error" : true,
+					    "model_not_found" : true,
+					    "insufficient_quota" : true })) {
+	return false;
+    } else {
+	return true;
+    }
 }
 
 function checkApiKey(apiKey) {
@@ -40,19 +63,13 @@ function checkApiKey(apiKey) {
       document.getElementById("valid-api-key").innerHTML = "";
       return;
     }
-    const response = await fetch("https://api.openai.com/v1/completions", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    });
-    const data = await response.json();
-    if (data.error && data.error.code === "invalid_api_key") {
-      document.getElementById("valid-api-key").innerHTML = "&#10005;";
-    } else {
-      document.getElementById("valid-api-key").innerHTML = "&check;";
-    }
-  })();
+	const isValid = await isValidApiKey(apiKey);
+	if (!isValid) {
+	    document.getElementById("valid-api-key").innerHTML = "&#10005;";
+	} else {
+	    document.getElementById("valid-api-key").innerHTML = "&check;";
+	}
+    })();
 }
 
 function extractCode(text) {
@@ -62,6 +79,9 @@ function extractCode(text) {
   * @param {string} text - A string containing text and other data.
   * @returns {string} Extracted code block from the completion object.
   */
+    if (!text) {
+	return text;
+    }
   const lines = text.split('\n');
   let i = 0;
   while (i < lines.length && lines[i].trim() === '') {
@@ -122,14 +142,31 @@ async function sendPromptToOpenAI(prompt, len, apiKey) {
     });
 
     const data = await response.json();
-    // Chop off any blank lines in the header.
+    if (data.error) {
+	if (data.error.code in { "invalid_request_error" : true,
+				 "model_not_found" : true,
+				 "insufficient_quota" : true }) {
+	    if ((data.error.code === "model_not_found") && (model === "gpt-4")) {
+		// Technically, model_not_found applies only for GPT-4.0
+		// if an account has not been funded with at least $1.
+		alert("You either need to add funds to your OpenAI account to use this feature, or you need to switch to GPT-3.5 if you are using free credits.");
+	    } else {
+		alert("You need to add funds to your OpenAI account to use this feature.");
+	    }
+	    return "";
+	}
+    }
+    try {
+	console.log(`Debugging info: Retrieved ${JSON.stringify(data.choices[0], null, 4)}`);
+    } catch {
+	console.log(`Debugging info: Failed to retrieve data.choices from the server. data = ${JSON.stringify(data)}`);
+    }
     
     try {
-	// WAS (GPT-3): return data.choices[0].text.replace(/^\s*[\r\n]/gm, "");
 	return data.choices[0].message.content.replace(/^\s*[\r\n]/gm, "");
     } catch {
-	return "# Query failed.\n";
-	
+	// return "# Query failed. See JavaScript console (in Chrome: View > Developer > JavaScript Console) for more info.\n";
+	return "# Query failed. See JavaScript console (in Chrome: View > Developer > JavaScript Console) for more info.\n";
     }
 }
 
@@ -214,7 +251,8 @@ function proposeOptimizationLine(filename, file_number, lineno) {
 function proposeOptimization(filename, file_number, lineno, params) {
     filename = unescape(filename)
   const useRegion = params["regions"];
-  const prof = globalThis.profile;
+    const prof = globalThis.profile;
+    console.log(filename);
   const this_file = prof.files[filename].lines;
   const imports = prof.files[filename].imports.join("\n");
   const start_region_line = this_file[lineno - 1]["start_region_line"];
@@ -246,10 +284,8 @@ function proposeOptimization(filename, file_number, lineno, params) {
       document.getElementById("api-key").value
     );
     if (!isValid) {
-      alert(
-        "You must enter a valid OpenAI API key to activate proposed optimizations."
-      );
-      return;
+	alert("You must enter a valid OpenAI API key to activate proposed optimizations.");
+	return;
     }
     elt.innerHTML = `<em>${indent}working...</em>`;
       let message = await optimizeCode(imports, code_region, context);
@@ -320,7 +356,7 @@ function time_consumed_str(time_in_ms) {
   }
 }
 
-function makeBar(python, native, system) {
+function makeBar(python, native, system, params) {
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     config: {
@@ -331,8 +367,8 @@ function makeBar(python, native, system) {
     autosize: {
       contains: "padding",
     },
-    width: "container",
-    height: "container",
+      width: params.width,
+      height: params.height,
     padding: 0,
     data: {
       values: [
@@ -409,8 +445,8 @@ function makeGPUPie(util) {
     autosize: {
       contains: "padding",
     },
-    width: "container",
-    height: "container",
+      width: 30,
+      height: 20,
     padding: 0,
     data: {
       values: [
@@ -439,11 +475,11 @@ function makeGPUPie(util) {
   };
 }
 
-function makeMemoryPie(native_mem, python_mem) {
+function makeMemoryPie(native_mem, python_mem, params) {
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    width: "container",
-    height: "container",
+      width: params.width,
+    height: 20,
     padding: 0,
     data: {
       values: [
@@ -477,7 +513,7 @@ function makeMemoryPie(native_mem, python_mem) {
   };
 }
 
-function makeMemoryBar(memory, title, python_percent, total, color) {
+function makeMemoryBar(memory, title, python_percent, total, color, params) {
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     config: {
@@ -488,8 +524,8 @@ function makeMemoryBar(memory, title, python_percent, total, color) {
     autosize: {
       contains: "padding",
     },
-    width: "container",
-    height: "container",
+      width: params.width,
+      height: params.height,
     padding: 0,
     data: {
       values: [
@@ -528,9 +564,8 @@ function makeSparkline(
   samples,
   max_x,
   max_y,
-  leak_velocity = 0,
-  height = 20,
-  width = 75
+    leak_velocity = 0,
+    params
 ) {
   const values = samples.map((v, i) => {
     let leak_str = "";
@@ -551,15 +586,15 @@ function makeSparkline(
   let leak_info = "";
   if (leak_velocity != 0) {
     leak_info = "possible leak";
-    height -= 10; // FIXME should be actual height of font
+      params.height -= 10; // FIXME should be actual height of font
   }
 
   const strokeWidth = 1; // 0.25;
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     data: { values: values },
-    width: width,
-    height: height,
+    width: params.width,
+    height: params.height,
     padding: 0,
     title: {
       text: leak_info,
@@ -858,7 +893,8 @@ function makeProfileLine(
       makeBar(
         line.n_cpu_percent_python,
         line.n_cpu_percent_c,
-        line.n_sys_percent
+          line.n_sys_percent,
+	  { height: 20, width: 100 }
       )
     );
   } else {
@@ -877,7 +913,8 @@ function makeProfileLine(
           "average memory",
           parseFloat(line.n_python_fraction),
           prof.max_footprint_mb.toFixed(2),
-          "darkgreen"
+            "darkgreen",
+	    { height: 20, width: 100 }
         )
       );
     } else {
@@ -894,14 +931,15 @@ function makeProfileLine(
           "peak memory",
           parseFloat(line.n_python_fraction),
           prof.max_footprint_mb.toFixed(2),
-          "darkgreen"
+            "darkgreen",
+	    { height: 20, width: 100 }
         )
       );
     } else {
       memory_bars.push(null);
     }
     s += "</td>";
-    s += `<td style='vertical-align: middle; width: 100'><span style="height:25; width: 100; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;
+    s += `<td style='vertical-align: middle; width: 100'><span style="height:20; width: 100; vertical-align: middle" id="memory_sparkline${memory_sparklines.length}"></span>`;
     s += "</td>";
     if (line.memory_samples.length > 0) {
       let leak_velocity = 0;
@@ -915,7 +953,8 @@ function makeProfileLine(
           line.memory_samples,
           prof.elapsed_time_sec * 1e9,
           prof.max_footprint_mb,
-          leak_velocity
+            leak_velocity,
+	    {height: 20, width: 75 }
         )
       );
     } else {
@@ -929,7 +968,8 @@ function makeProfileLine(
           100 *
             line.n_usage_fraction *
             (1 - parseFloat(line.n_python_fraction)),
-          100 * line.n_usage_fraction * parseFloat(line.n_python_fraction)
+            100 * line.n_usage_fraction * parseFloat(line.n_python_fraction),
+	    { width: 30 }
         )
       );
     } else {
@@ -974,7 +1014,7 @@ function makeProfileLine(
     end_region_line != start_region_line
       ? ""
       : "empty-profile";
-  s += `<td align="right" class="dummy ${empty_profile}" style="vertical-align: middle; width: 50" data-sort="${line.lineno}"><font color="gray" style="font-size: 70%; vertical-align: middle" >${line.lineno}&nbsp;</font></td>`;
+    s += `<td align="right" class="dummy ${empty_profile}" style="vertical-align: middle; width: 50" data-sort="${line.lineno}"><span onclick="vsNavigate('${escape(filename)}',${line.lineno})"><font color="gray" style="font-size: 70%; vertical-align: middle" >${line.lineno}&nbsp;</font></span></td>`;
 
   const regionOptimizationString =
     propose_optimizations && showExplosion
@@ -1004,7 +1044,7 @@ function makeProfileLine(
   } else {
     s += lineOptimizationString;
   }
-  s += `<pre style="height: 10; display: inline; white-space: pre-wrap; overflow-x: auto; border: 0px; vertical-align: middle"><code class="language-python ${empty_profile}">${codeLine}<span id="code-${file_number}-${line.lineno}" bgcolor="white"></span></code></pre></td>`;
+    s += `<pre style="height: 10; display: inline; white-space: pre-wrap; overflow-x: auto; border: 0px; vertical-align: middle"><code class="language-python ${empty_profile}">${codeLine}<span id="code-${file_number}-${line.lineno}" bgcolor="white"></span></code></pre></td>`;
   s += "</tr>";
   return s;
 }
@@ -1131,8 +1171,7 @@ async function display(prof) {
         prof.elapsed_time_sec * 1e9,
         prof.max_footprint_mb,
         0,
-        20,
-        200
+          { height: 20, width: 200 }
       )
     );
   }
@@ -1163,7 +1202,7 @@ async function display(prof) {
     cpu_system += cs;
     mem_python += mp;
   }
-  cpu_bars.push(makeBar(cpu_python, cpu_native, cpu_system));
+    cpu_bars.push(makeBar(cpu_python, cpu_native, cpu_system, { height: 20, width: 200 }));
   if (prof.memory) {
     memory_bars.push(
       makeMemoryBar(
@@ -1171,7 +1210,8 @@ async function display(prof) {
         "memory",
         mem_python / max_alloc,
         max_alloc,
-        "darkgreen"
+          "darkgreen",
+	  { height: 20, width: 150 }
       )
     );
   }
@@ -1332,8 +1372,8 @@ async function display(prof) {
   });
   cpu_bars.forEach((p, index) => {
     if (p) {
-      (async () => {
-        await vegaEmbed(`#cpu_bar${index}`, p, { actions: false });
+	(async () => {
+            await vegaEmbed(`#cpu_bar${index}`, p, { actions: false });
       })();
     }
   });
